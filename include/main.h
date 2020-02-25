@@ -5,6 +5,12 @@
 #define COLOR_RED     31
 #define COLOR_YELLOW  33
 
+#define WIDTH   21
+#define HEIGHT  21
+
+enum cell_state {ALIVE = 1, DEAD = 0};
+typedef char** mat;
+
 /* Prototypes */
 void errorMSG(char* msg);
 void warningMSG(char* msg);
