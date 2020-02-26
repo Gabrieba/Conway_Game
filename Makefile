@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -W -Wall -pedantic -ansi
-LDFLAGS = -lreadline -lm
+LDFLAGS = -lreadline -lm -lSDL
 EXEC = conway
 SRC = $(wildcard src/*.c)
 OBJ = $(SRC: *.c = *.o)

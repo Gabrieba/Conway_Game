@@ -8,7 +8,7 @@
 #include <readline/history.h>
 
 #include "../include/main.h"
-
+#include "../include/affichage.h"
 
 
 
@@ -95,6 +95,7 @@ int createMatrix(mat* pmat) {
         return -1;
       }
     }
+    return 0;
 }
 
 
@@ -147,6 +148,19 @@ int main(int argc, char* argv[]) {
     if (strcmp(cmd, "exit") == 0) {
       free(cmd);
       exit(EXIT_SUCCESS);
+    }
+    if (strcmp(cmd, "fenetre") == 0) {
+      code = createMatrix(&mat1);
+      if (code < 0) {
+        destroyMatrix(&mat1);
+        break;
+      }
+      code = loadGrid("grid.txt", &mat1);
+      code = dispGrid(mat1);
+      if (code < 0) {
+        destroyMatrix(&mat1);
+        break;
+      }
     }
     if (strcmp(cmd, "load") == 0) {
       code = createMatrix(&mat1);

@@ -15,3 +15,7 @@ typedef char** mat;
 void errorMSG(char* msg);
 void warningMSG(char* msg);
 int stringStandardise(char* cmd);
+int loadGrid(char* filename, mat* pgrid);
+void printGrid(mat grid);
+int createMatrix(mat* pmat);
+void destroyMatrix(mat* pmat);
