@@ -25,4 +25,4 @@ int loadGrid(char* filename, mat* pgrid);
 void printMatrix(mat grid);
 int createMatrix(mat* pmat);
 void destroyMatrix(mat* pmat);
-int executecmd(char* cmd, mat* mat1, int bit_load);
+int executecmd(char* cmd, char* filename, mat* mat1, int bit_load);

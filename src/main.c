@@ -110,8 +110,9 @@ void destroyMatrix(mat* pmat) {
 
 
 // bit_load vaut 1 si l'utilisateur a déjà chargé sa grille initiale dans l'interpréteur
-int executecmd(char* cmd, mat* mat1, int bit_load) {
+int executecmd(char* cmd, char* filename, mat* mat1, int bit_load) {
   int code;
+  char command[128] = "ls grid | grep ";
   if (strcmp(cmd, "") == 0) {   // Commande vide
     return 0;
   }
@@ -124,7 +125,12 @@ int executecmd(char* cmd, mat* mat1, int bit_load) {
       destroyMatrix(mat1);
       return ERRORVALUE;
     }
-    code = loadGrid("grid.txt", mat1);
+    strcat(command, filename);
+    if (system(command) != 0) {   // Teste si la fichier 'filename' existe dans grid/
+      warningMSG("Fichier grille initiale introuvable");
+      return 0;
+    }
+    code = loadGrid(filename, mat1);
     if (code < 0) {
       destroyMatrix(mat1);
       return ERRORVALUE;
@@ -157,7 +163,7 @@ int executecmd(char* cmd, mat* mat1, int bit_load) {
 
 
 int stringStandardise(char* cmd, char* filename) {
-  const char* separators = " ,.-;";
+  const char* separators = " -";
   char* str;
   strcpy(str, cmd);
   char* strtoken = strtok(str, separators);   // Récupération commande
@@ -203,11 +209,13 @@ int main(int argc, char* argv[]) {
     errorMSG("Erreur lors de l'allocation mémoire de nom de fichier.");
     exit(EXIT_FAILURE);
   }
+
   while(1) {
     cmd = readline("Shell : > ");
     code = stringStandardise(cmd, filename);
+    printf("filename = %s\n", filename);
     if (code == 0)
-      code = executecmd(cmd, &mat1, bit_load);
+      code = executecmd(cmd, filename, &mat1, bit_load);
     cmd[0] = '\0';
     filename[0] = '\0';
     switch(code) {      // Gestion des erreurs
