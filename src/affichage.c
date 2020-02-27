@@ -29,10 +29,10 @@ int coordonneeCalc(SDL_Rect* pposition, unsigned int* pixel, mat mat1, int rang)
     printf("rang = %d\n", rang);
     return -1;
   }
-  if (mat1[i][j] == '1')
-    *pixel = 255;     // Couleur = blanc
-  else if(mat1[i][j] == '0')
-    *pixel = 0;       // Couleur = noir
+  if (mat1[i][j] == '1')    // Cellule vivante
+    *pixel = 0;     // Couleur = noir
+  else if(mat1[i][j] == '0')    // Cellule morte
+    *pixel = 255;       // Couleur = blanc
   else {
     errorMSG("Erreur dans la valeur des coefficients de la matrice");
     return -1;

@@ -30,7 +30,7 @@ int loadGrid(char* filename, mat* pgrid) {
   FILE* f1; int i, j;
   char chaine[256];
   char line[WIDTH];
-  char file[15] = "grid/";
+  char file[15] = "grid/";    // Nom du dossier
   enum cell_state state;
   strcat(file, filename);
   f1 = fopen(file, "r");
@@ -68,7 +68,7 @@ int loadGrid(char* filename, mat* pgrid) {
 
 
 
-void printGrid(mat grid) {
+void printMatrix(mat grid) {
   int i, j;
   for (i = 0; i < HEIGHT; i++) {
     for (j = 0; j < WIDTH; j++) {
@@ -108,77 +108,131 @@ void destroyMatrix(mat* pmat) {
 }
 
 
-int stringStandardise(char* cmd) {
-  int i, length;
-  int j = 0;
-  char* new_cmd = calloc(256, sizeof(*new_cmd));
-  if (new_cmd == NULL) {
-    errorMSG("Erreur lors de l'allocation mémoire de commande.");
-    return(-1);
+
+// bit_load vaut 1 si l'utilisateur a déjà chargé sa grille initiale dans l'interpréteur
+int executecmd(char* cmd, mat* mat1, int bit_load) {
+  int code;
+  if (strcmp(cmd, "") == 0) {   // Commande vide
+    return 0;
   }
-  length = strlen(cmd);
-  for (i=0; i<length; i++) {
-    if (cmd[i] != ' ' && cmd[i] != '\t') {
-      new_cmd[j] = cmd[i];
-      j++;
+  if (strcmp(cmd, "exit") == 0) {
+    return EXITVALUE;
+  }
+  else if (strcmp(cmd, "load") == 0) {
+    code = createMatrix(mat1);
+    if (code < 0) {
+      destroyMatrix(mat1);
+      return ERRORVALUE;
+    }
+    code = loadGrid("grid.txt", mat1);
+    if (code < 0) {
+      destroyMatrix(mat1);
+      return ERRORVALUE;
+    }
+    printMatrix(*mat1);
+    return LOADVALUE;
+  }
+  else if (strcmp(cmd, "disp") == 0) {
+    if (bit_load != 1) {
+      warningMSG("Veuillez charger une grille initiale avant de l'afficher");
+      return 0;
+    }
+    code = dispGrid(*mat1);
+    if (code < 0) {
+      destroyMatrix(mat1);
+      return ERRORVALUE;
+    }
+    return 0;
+  }
+  else if (strcmp(cmd, "run") == 0) {
+    warningMSG("Pas encore implémenté !");
+    return 0;
+  }
+  else {
+    warningMSG("Commande inconnue");
+    return 0;
+  }
+}
+
+
+
+int stringStandardise(char* cmd, char* filename) {
+  const char* separators = " ,.-;";
+  char* str;
+  strcpy(str, cmd);
+  char* strtoken = strtok(str, separators);   // Récupération commande
+  if (strtoken == NULL)       // Commande vide
+    return ERRORSTRING;
+  strcpy(cmd, strtoken);
+  strtoken = strtok(NULL, separators);   // Récupération nom du fichier
+  if (strcmp(cmd, "load") != 0) {
+    if (strtoken != NULL) {
+      warningMSG("Trop d'arguments spécifiés");
+      return ERRORSTRING;
+    }
+    return 0;
+  }
+  else {        // Commande load
+    if (strtoken == NULL) {
+      warningMSG("Il manque le nom de la grille à charger");
+      return ERRORSTRING;
+    }
+    strcpy(filename, strtoken);
+    strtoken = strtok(NULL, separators);   // On regarde en 3eme position
+    if (strtoken != NULL) {
+      warningMSG("Trop d'arguments spécifiés");
+      return ERRORSTRING;
     }
   }
-  new_cmd[j] = '\0';
-  strcpy(cmd, new_cmd);
-  free(new_cmd);
   return 0;
 }
 
 
 
 int main(int argc, char* argv[]) {
-  int code;
+  int code; int bit_load = 0;
   mat mat1;
   puts("\n \t \t WELCOME TO CONWAY'S GAME");
-  char* cmd = calloc(256, sizeof(*cmd));
+  char* cmd = calloc(128, sizeof(*cmd));
   if (cmd == NULL) {
-    perror("Erreur lors de l'allocation mémoire de commande.");
+    errorMSG("Erreur lors de l'allocation mémoire de commande.");
+    exit(EXIT_FAILURE);
+  }
+  char* filename = calloc(128, sizeof(*filename));
+  if (cmd == NULL) {
+    errorMSG("Erreur lors de l'allocation mémoire de nom de fichier.");
     exit(EXIT_FAILURE);
   }
   while(1) {
     cmd = readline("Shell : > ");
-    code = stringStandardise(cmd);
-    if (code < 0)
-      break;
-    if (strcmp(cmd, "exit") == 0) {
-      free(cmd);
-      exit(EXIT_SUCCESS);
-    }
-    if (strcmp(cmd, "fenetre") == 0) {
-      code = createMatrix(&mat1);
-      if (code < 0) {
-        destroyMatrix(&mat1);
-        break;
-      }
-      code = loadGrid("grid.txt", &mat1);
-      code = dispGrid(mat1);
-      if (code < 0) {
-        destroyMatrix(&mat1);
-        break;
-      }
-    }
-    if (strcmp(cmd, "load") == 0) {
-      code = createMatrix(&mat1);
-      if (code < 0) {
-        destroyMatrix(&mat1);
-        break;
-      }
-      code = loadGrid("grid.txt", &mat1);
-      if (code < 0) {
-        destroyMatrix(&mat1);
-        break;
-      }
-      printGrid(mat1);
-      destroyMatrix(&mat1);
-    }
+    code = stringStandardise(cmd, filename);
+    if (code == 0)
+      code = executecmd(cmd, &mat1, bit_load);
     cmd[0] = '\0';
+    filename[0] = '\0';
+    switch(code) {      // Gestion des erreurs
+      case 0 :
+        break;
+      case ERRORSTRING :    // Faute de frappe commandes
+        break;
+      case EXITVALUE :
+        free(cmd);
+        free(filename);
+        exit(EXIT_SUCCESS);
+      case LOADVALUE :    // L'utilisateur a chargé sa grille initiale
+        bit_load = 1;
+        break;
+      case ERRORVALUE:
+        puts("Erreur détectée");
+        free(cmd);
+        free(filename);
+        exit(EXIT_FAILURE);
+      default :
+        errorMSG("Code de retour inconnu");
+        free(cmd);
+        free(filename);
+        exit(EXIT_FAILURE);
+    }
   }
-  puts("Erreur détectée");
-  free(cmd);
-  exit(EXIT_FAILURE);
+  puts("Should never be here");
 }
