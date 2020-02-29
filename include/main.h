@@ -1,29 +1,34 @@
 #include <stdio.h>
 
-#define ERRORVALUE -1
-#define ERRORSTRING 1
-#define EXITVALUE 2
-#define LOADVALUE 3
+#define ERRORVALUE    -1
+#define ERRORSTRING   1
+#define EXITVALUE     2
+#define LOADVALUE     3
 
+#define DIMH      50
+#define DIMX      50
 
 #define STYLE_BOLD    0x01
 #define STYLE_OFF     0x00
 #define COLOR_RED     31
 #define COLOR_YELLOW  33
 
-#define WIDTH   40
-#define HEIGHT  40
 
 enum cell_state {ALIVE = 1, DEAD = 0};
 typedef char** mat;
 
+typedef struct {
+              int height;
+              int width;
+} dimensions;
+
 /* Prototypes */
 void errorMSG(char* msg);
 void warningMSG(char* msg);
+void helpCommand(int bit_load);
 int stringStandardise(char* cmd, char* filename);
-int loadGrid(char* filename, mat* pgrid);
-void printMatrix(mat grid);
-void printMatrix__(mat* grid);
+int loadGrid(char* filename, mat* pgrid, dimensions* dim);
+void printMatrix(mat grid, dimensions dim);
 int createMatrix(mat* pmat);
 void destroyMatrix(mat* pmat);
-int executecmd(char* cmd, char* filename, mat* mat1, int bit_load);
+int executecmd(char* cmd, char* filename, mat* mat1, dimensions* dim, int bit_load);

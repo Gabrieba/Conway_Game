@@ -4,23 +4,23 @@
 #include "../include/main.h"
 
 
-int calculNeighbours(mat mat1, int i, int j) {
+int calculNeighbours(mat mat1, dimensions dim, int i, int j) {
   int xposition, hposition;
   int res = 0;
 
   if (i-1 < 0)
-    hposition = HEIGHT-1;
+    hposition = (dim.height)-1;
   else
     hposition = i-1;
   if (mat1[hposition][j] == 49) res++;     // DESSUS DIRECT
 
   if (j-1 < 0)
-    xposition = WIDTH-1;
+    xposition = (dim.width)-1;
   else
     xposition = j-1;
   if (mat1[hposition][xposition] == 49) res++;   // DESSUS GAUCHE
 
-  if (j+1 > WIDTH-1)
+  if (j+1 > (dim.width)-1)
     xposition = 0;
   else
     xposition = j+1;
@@ -29,24 +29,24 @@ int calculNeighbours(mat mat1, int i, int j) {
   if (mat1[i][xposition] == 49) res++;   // DROITE DIRECT
 
   if (j-1 < 0)
-    xposition = WIDTH-1;
+    xposition = (dim.width)-1;
   else
     xposition = j-1;
   if (mat1[i][xposition] == 49) res++;   // GAUCHE DIRECT
 
-  if (i+1 > WIDTH-1)
+  if (i+1 > (dim.height)-1)
     hposition = 0;
   else
     hposition = i+1;
   if (mat1[hposition][j] == 49) res++;   // DESSOUS DIRECT
 
   if (j-1 < 0)
-    xposition = WIDTH-1;
+    xposition = (dim.width)-1;
   else
     xposition = j-1;
   if (mat1[hposition][xposition] == 49) res++;   // DESSOUS GAUCHE
 
-  if (j+1 > WIDTH-1)
+  if (j+1 > (dim.width)-1)
     xposition = 0;
   else
     xposition = j+1;
@@ -57,17 +57,17 @@ int calculNeighbours(mat mat1, int i, int j) {
 
 
 
-void copyMatrix(mat* pmat, mat* mat1) {
+void copyMatrix(mat* pmat, mat* mat1, dimensions dim) {
   int i, j;
-  for (i = 0; i < HEIGHT; i++) {
-    for (j = 0; j < WIDTH; j++) {
+  for (i = 0; i < dim.height; i++) {
+    for (j = 0; j < dim.width; j++) {
       (*pmat)[i][j] = (*mat1)[i][j];
     }
   }
 }
 
 
-int newMatrix(mat* pmat) {
+int newMatrix(mat* pmat, dimensions dim) {
   int i, j, res, code;
   mat mat1;
   code = createMatrix(&mat1);
@@ -75,9 +75,9 @@ int newMatrix(mat* pmat) {
     return ERRORVALUE;
   }
 
-  for (i = 0; i < HEIGHT; i++) {
-    for (j = 0; j < WIDTH; j++) {
-      res = calculNeighbours(*pmat, i, j);
+  for (i = 0; i < dim.height; i++) {
+    for (j = 0; j < dim.width; j++) {
+      res = calculNeighbours(*pmat, dim, i, j);
       if (res < 0 || res > 8) {
         errorMSG("Nombre de voisins absurde");
         return -1;
@@ -95,7 +95,7 @@ int newMatrix(mat* pmat) {
 
     }
   }
-  copyMatrix(pmat, &mat1);
+  copyMatrix(pmat, &mat1, dim);
   destroyMatrix(&mat1);
   return 0;
 }

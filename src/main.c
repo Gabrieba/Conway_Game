@@ -27,41 +27,70 @@ void warningMSG(char* msg) {
 }
 
 
-int loadGrid(char* filename, mat* pgrid) {
-  FILE* f1; int i, j;
+// Affiche une aide pour l'utilisateur
+void helpCommand(int bit_load) {
+  puts("");
+  puts("Dans l'interpréteur de commandes :");
+  puts("load <file.txt>    pour charger la grille initiale dans l'interpréteur (inutile d'indiquer son dossier grid/)");
+  puts("disp               pour afficher la grille sous format graphique");
+  puts("run                pour appliquer la règle sur une génération (sans affichage graphique)");
+  puts("play               pour jouer la grille préalablement chargée selon la règle commune sur N générations (avec affichage graphique) \n \t\t\tLa macro N est spécifiée dans 'affichage.h'");
+  puts("");
+  if (bit_load)
+    puts("Actuellement, une grille initiale a bien été chargée dans l'interpréteur");
+  else
+    warningMSG("Actuellement, aucune grille initiale n'a été chargée dans l'interpréteur; commencez avec 'load'");
+  puts("");
+}
+
+
+// Charge une grille initiale dans l'interpréteur depuis un fichier
+// Le contenu est chargé dans 'pgrid', ses dimensions dans 'dim'
+int loadGrid(char* filename, mat* pgrid, dimensions* dim) {
+  FILE* f1; int i, j, width, height;
   char chaine[256];
-  char line[WIDTH];
   char file[15] = "grid/";    // Nom du dossier
   enum cell_state state;
   strcat(file, filename);
   f1 = fopen(file, "r");
   if (f1 == NULL) {
-    errorMSG("Fichier inexistant !");
-    return -1;
+    errorMSG("Ouverture du fichier grille initiale impossible");
+    return ERRORVALUE;
   }
-  fgets(chaine, 256, f1);
-  for (i = 0; i < HEIGHT; i++) {
-    if(fgets(line, WIDTH+2, f1) == NULL) {
+  fgets(chaine, 128, f1);   // Lecture ligne commentaire
+  fscanf(f1, "%d %d", &height, &width);   // Lecture des dimensions
+  if (height > DIMH || width > DIMX) {
+    warningMSG("Matrice trop grande; veuillez changer DIMH et/ou DIMX dans main.h");
+    return ERRORSTRING;
+  }
+  dim->height = height;
+  dim->width = width;
+  chaine[0] = '\0';
+  fgets(chaine, 2, f1);   // Lecture du retour chariot pour atteindre le début de la grille
+
+  char line[dim->width];
+  for (i = 0; i < dim->height; i++) {
+    if(fgets(line, (dim->width)+2, f1) == NULL) {
       errorMSG("Trop peu de lignes de cellules dans la grille");
-      return -1;
+      return ERRORVALUE;
     }
-    for (j = 0; j < WIDTH; j++) {
+    for (j = 0; j < dim->width; j++) {
       state = line[j];
       if (state == '\n' || state == ' ') {
         errorMSG("Trop peu de cellules inscrites dans une ligne de la grille.");
-        return -1;
+        return ERRORVALUE;
       }
       if (state != 48 && state != 49) {     // ASCII characters of '0' and '1'
         errorMSG("Etat inconnu lu dans la grille (0/1)");
         printf("state = %c\n", state);
-        return -1;
+        return ERRORVALUE;
       }
-      (*pgrid)[i][j] = (char) state; 
+      (*pgrid)[i][j] = (char) state;
     }
   }
-  if(fgets(line, WIDTH+2, f1) != NULL) {
+  if(fgets(line, (dim->width)+2, f1) != NULL) {
     errorMSG("Trop de lignes de cellules dans la grille");
-    return -1;
+    return ERRORVALUE;
   }
   fclose(f1);
   return 0;
@@ -69,10 +98,11 @@ int loadGrid(char* filename, mat* pgrid) {
 
 
 
-void printMatrix(mat grid) {
+// Affiche la matrice
+void printMatrix(mat grid, dimensions dim) {
   int i, j;
-  for (i = 0; i < HEIGHT; i++) {
-    for (j = 0; j < WIDTH; j++) {
+  for (i = 0; i < dim.height; i++) {
+    for (j = 0; j < dim.width; j++) {
       printf("%c ", grid[i][j]);
     }
     puts("");
@@ -81,30 +111,20 @@ void printMatrix(mat grid) {
 }
 
 
-void printMatrix__(mat* grid) {
-  int i, j;
-  for (i = 0; i < HEIGHT; i++) {
-    for (j = 0; j < WIDTH; j++) {
-      printf("%c ", (*grid)[i][j]);
-    }
-    puts("");
-  }
-  puts("");
-}
 
-
+// Alloue de l'espace pour la matrice
 int createMatrix(mat* pmat) {
     int i;
-    *pmat = malloc(HEIGHT * sizeof *(*pmat));
+    *pmat = malloc(DIMH * sizeof *(*pmat));
     if (*pmat == NULL) {
-        printf("Allocation impossible");
-        return -1;
+        errorMSG("Allocation mémoire impossible pour la matrice");
+        return ERRORVALUE;
     }
-    for (i = 0; i < HEIGHT; i++) {
-      (*pmat)[i] = calloc(WIDTH, sizeof *(*pmat)[i]);
+    for (i = 0; i < DIMH; i++) {
+      (*pmat)[i] = calloc(DIMX, sizeof *(*pmat)[i]);
       if ((*pmat)[i] == NULL) {
-        printf("Allocation impossible");
-        return -1;
+        errorMSG("Allocation mémoire impossible pour la matrice");
+        return ERRORVALUE;
       }
     }
     return 0;
@@ -112,17 +132,19 @@ int createMatrix(mat* pmat) {
 
 
 
+// Libère la matrice allouée
 void destroyMatrix(mat* pmat) {
   int i;
-  for (i = 0; i < HEIGHT; i++)
+  for (i = 0; i < DIMH; i++)
     free((*pmat)[i]);
   free(*pmat);
 }
 
 
 
-// bit_load vaut 1 si l'utilisateur a déjà chargé sa grille initiale dans l'interpréteur
-int executecmd(char* cmd, char* filename, mat* mat1, int bit_load) {
+// Redirige l'exécution du programme vers les fonctions appropriées, suivant la commande rentrée
+// bit_load vaut 1 si l'utilisateur a déjà chargé sa grille initiale dans l'interpréteur, 0 sinon
+int executecmd(char* cmd, char* filename, mat* mat1, dimensions* dim, int bit_load) {
   int code;
   char command[128] = "ls grid | grep ";
   if (strcmp(cmd, "") == 0) {   // Commande vide
@@ -141,12 +163,12 @@ int executecmd(char* cmd, char* filename, mat* mat1, int bit_load) {
       warningMSG("Fichier grille initiale introuvable");
       return 0;
     }
-    code = loadGrid(filename, mat1);
-    if (code < 0) {
+    code = loadGrid(filename, mat1, dim);
+    if (code != 0) {
       destroyMatrix(mat1);
-      return ERRORVALUE;
+      return code;
     }
-    printMatrix(*mat1);
+    printMatrix(*mat1, *dim);
     return LOADVALUE;
   }
   else if (strcmp(cmd, "disp") == 0) {
@@ -154,7 +176,7 @@ int executecmd(char* cmd, char* filename, mat* mat1, int bit_load) {
       warningMSG("Veuillez charger une grille initiale avant de l'afficher");
       return 0;
     }
-    code = dispGrid(*mat1);
+    code = dispGrid(*mat1, *dim);
     if (code < 0) {
       destroyMatrix(mat1);
       return ERRORVALUE;
@@ -164,24 +186,41 @@ int executecmd(char* cmd, char* filename, mat* mat1, int bit_load) {
   else if (strcmp(cmd, "run") == 0) {
     if (bit_load != 1) {
       warningMSG("Veuillez charger une grille initiale avant de l'exécuter");
-      return 0;
+      return ERRORSTRING;
     }
-    code = newMatrix(mat1);
+    code = newMatrix(mat1, *dim);
     if (code < 0) {
       destroyMatrix(mat1);
       return ERRORVALUE;
     }
-    printMatrix(*mat1);
+    printMatrix(*mat1, *dim);
+    return 0;
+  }
+  else if (strcmp(cmd, "play") == 0) {
+    if (bit_load != 1) {
+      warningMSG("Veuillez charger une grille initiale avant de l'exécuter");
+      return ERRORSTRING;
+    }
+    code = playGame(*mat1, *dim);
+    if (code < 0) {
+      destroyMatrix(mat1);
+      return ERRORVALUE;
+    }
+    return 0;
+  }
+  else if (strcmp(cmd, "help") == 0) {
+    helpCommand(bit_load);
     return 0;
   }
   else {
     warningMSG("Commande inconnue");
-    return 0;
+    return ERRORSTRING;
   }
 }
 
 
 
+// Récupère la commande et le nom du fichier si besoin
 int stringStandardise(char* cmd, char* filename) {
   const char* separators = " -";
   char* str;
@@ -215,9 +254,11 @@ int stringStandardise(char* cmd, char* filename) {
 
 
 
+// Code principal + gestion des erreurs
 int main(int argc, char* argv[]) {
   int code; int bit_load = 0;
   mat mat1;
+  dimensions dim;
   puts("\n \t \t WELCOME TO CONWAY'S GAME");
   char* cmd = calloc(128, sizeof(*cmd));
   if (cmd == NULL) {
@@ -234,7 +275,7 @@ int main(int argc, char* argv[]) {
     cmd = readline("Shell : > ");
     code = stringStandardise(cmd, filename);
     if (code == 0)
-      code = executecmd(cmd, filename, &mat1, bit_load);
+      code = executecmd(cmd, filename, &mat1, &dim, bit_load);
     cmd[0] = '\0';
     filename[0] = '\0';
     switch(code) {      // Gestion des erreurs
