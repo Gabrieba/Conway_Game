@@ -11,7 +11,7 @@ Les cellules sont représentées par une matrice d'états binaires : 1 <=> vivan
 Dans l'interpréteur :
 load <file.txt>    pour charger la grille initiale dans l'interpréteur
 
-disp <file.txt>    pour afficher la grille sous format graphique
+disp               pour afficher la grille sous format graphique
 
 run <file.txt>     pour jouer la grille préalablement chargée selon la règle numéro ??
 
@@ -21,3 +21,4 @@ help               pour obtenir de l'aide
 ----- PROCHAINES MISES A JOUR -----
 La résolution et le nombre de cellules seront aggrandis
 Les grilles initiales pourront être au format RLE, format plus compact
+Ajout des règles

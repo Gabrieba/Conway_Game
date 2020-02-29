@@ -9,6 +9,7 @@
 
 #include "../include/main.h"
 #include "../include/affichage.h"
+#include "../include/rules.h"
 
 
 
@@ -47,7 +48,7 @@ int loadGrid(char* filename, mat* pgrid) {
     for (j = 0; j < WIDTH; j++) {
       state = line[j];
       if (state == '\n' || state == ' ') {
-        errorMSG("Trop peu de cellules inscrites dans une ligne de la grille");
+        errorMSG("Trop peu de cellules inscrites dans une ligne de la grille.");
         return -1;
       }
       if (state != 48 && state != 49) {     // ASCII characters of '0' and '1'
@@ -55,7 +56,7 @@ int loadGrid(char* filename, mat* pgrid) {
         printf("state = %c\n", state);
         return -1;
       }
-      (*pgrid)[i][j] = (char) state;
+      (*pgrid)[i][j] = (char) state; 
     }
   }
   if(fgets(line, WIDTH+2, f1) != NULL) {
@@ -79,6 +80,17 @@ void printMatrix(mat grid) {
   puts("");
 }
 
+
+void printMatrix__(mat* grid) {
+  int i, j;
+  for (i = 0; i < HEIGHT; i++) {
+    for (j = 0; j < WIDTH; j++) {
+      printf("%c ", (*grid)[i][j]);
+    }
+    puts("");
+  }
+  puts("");
+}
 
 
 int createMatrix(mat* pmat) {
@@ -122,7 +134,6 @@ int executecmd(char* cmd, char* filename, mat* mat1, int bit_load) {
   else if (strcmp(cmd, "load") == 0) {
     code = createMatrix(mat1);
     if (code < 0) {
-      destroyMatrix(mat1);
       return ERRORVALUE;
     }
     strcat(command, filename);
@@ -151,7 +162,16 @@ int executecmd(char* cmd, char* filename, mat* mat1, int bit_load) {
     return 0;
   }
   else if (strcmp(cmd, "run") == 0) {
-    warningMSG("Pas encore implémenté !");
+    if (bit_load != 1) {
+      warningMSG("Veuillez charger une grille initiale avant de l'exécuter");
+      return 0;
+    }
+    code = newMatrix(mat1);
+    if (code < 0) {
+      destroyMatrix(mat1);
+      return ERRORVALUE;
+    }
+    printMatrix(*mat1);
     return 0;
   }
   else {
@@ -213,7 +233,6 @@ int main(int argc, char* argv[]) {
   while(1) {
     cmd = readline("Shell : > ");
     code = stringStandardise(cmd, filename);
-    printf("filename = %s\n", filename);
     if (code == 0)
       code = executecmd(cmd, filename, &mat1, bit_load);
     cmd[0] = '\0';

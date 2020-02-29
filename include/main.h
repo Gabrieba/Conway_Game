@@ -23,6 +23,7 @@ void warningMSG(char* msg);
 int stringStandardise(char* cmd, char* filename);
 int loadGrid(char* filename, mat* pgrid);
 void printMatrix(mat grid);
+void printMatrix__(mat* grid);
 int createMatrix(mat* pmat);
 void destroyMatrix(mat* pmat);
 int executecmd(char* cmd, char* filename, mat* mat1, int bit_load);
