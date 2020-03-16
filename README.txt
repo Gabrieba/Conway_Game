@@ -14,14 +14,17 @@ run                pour appliquer la règle sur une génération (sans affichage
 play               pour jouer la grille préalablement chargée selon la règle commune sur N générations (avec affichage graphique)
                    La macro N est spécifiée dans 'affichage.h'
 
+exit               pour quitter l'interpréteur de commande
+
 help               pour obtenir de l'aide
+
 
 
 ----- PROCHAINES MISES A JOUR -----
 La résolution (et les dimensions) de la fenêtre graphique s'adapteront aux dimensions de la matrice
 Les grilles initiales pourront être au format RLE, format plus compact
 Ajout de règles supplémentaires
-Arrêt de l'exécution lorsque toutes les cellules sont mortes, ou qu'une configuration stable est obtenue
+Arrêt de l'exécution lorsque qu'une configuration stable est obtenue
 Implantation de structures usuelles (canons, planeurs, ...)
 
 

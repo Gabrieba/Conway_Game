@@ -35,6 +35,7 @@ void helpCommand(int bit_load) {
   puts("disp               pour afficher la grille sous format graphique");
   puts("run                pour appliquer la règle sur une génération (sans affichage graphique)");
   puts("play               pour jouer la grille préalablement chargée selon la règle commune sur N générations (avec affichage graphique) \n \t\t\tLa macro N est spécifiée dans 'affichage.h'");
+  puts("exit               pour quitter l'interpréteur");
   puts("");
   if (bit_load)
     puts("Actuellement, une grille initiale a bien été chargée dans l'interpréteur");
@@ -98,7 +99,22 @@ int loadGrid(char* filename, mat* pgrid, dimensions* dim) {
 
 
 
-// Affiche la matrice
+// Return 1 if the matrix is full of zero; 0 otherwise
+int emptyMatrix(mat grid, dimensions dim) {
+  int i, j;
+  for (i = 0; i < dim.height; i++) {
+    for (j = 0; j < dim.width; j++) {
+      if (grid[i][j] == 49)
+        return 0;
+    }
+  }
+  return 1;
+}
+
+
+
+
+// Print the matrix in the shell with '0' and '1'
 void printMatrix(mat grid, dimensions dim) {
   int i, j;
   for (i = 0; i < dim.height; i++) {
