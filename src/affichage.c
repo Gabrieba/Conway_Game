@@ -100,7 +100,7 @@ int playGame(mat mat1, dimensions dim) {
   SDL_Color colortxt = {255, 0, 0};         // Text color to print the number of generations
   SDL_Surface* textSurface = NULL;
   int nb_cells = (dim.height)*(dim.width);    // Total number of cells
-  int continuer = 1; int prevtime = 0; int actualtime = 0; int age = 1;
+  int continuer = 1; int prevtime = 0; int actualtime = 0; int age = 0;
   int i, xlarge, hlarge, code;
   unsigned int pixel;
   char buffer[1024];
@@ -110,14 +110,15 @@ int playGame(mat mat1, dimensions dim) {
     printf("%s\n", SDL_GetError());
     return ERRORVALUE;
   }
-  ecran = SDL_SetVideoMode(XWINDOW, HWINDOW, 32, SDL_SWSURFACE);    // Configuration mode de fenetrage
-  SDL_WM_SetCaption("## Conway's game ##", NULL);     // Titre
+  ecran = SDL_SetVideoMode(XWINDOW, HWINDOW, 32, SDL_SWSURFACE);    // window mode configuration
+  SDL_WM_SetCaption("## Conway's game ##", NULL);                  // Title of the SDL window
   if (ecran == NULL) {
     errorMSG("Erreur à l'ouverture de la fenêtre SDL");
     printf("%s\n", SDL_GetError());
+    SDL_Quit();     // Quit the SDL library
     return ERRORVALUE;
   }
-  xlarge = XWINDOW / (dim.width);   // Largeur d'une cellule
+  xlarge = XWINDOW / (dim.width);      // Largeur d'une cellule
   hlarge = HWINDOW / (dim.height);    // Hauteur d'une cellule
   for (i = 0; i < nb_cells; i++) {
     cellule[i] = SDL_CreateRGBSurface(SDL_SWSURFACE, xlarge, hlarge, 32, 0, 0, 0, 0);   // Création de toutes les cellules
@@ -131,61 +132,93 @@ int playGame(mat mat1, dimensions dim) {
     }
     SDL_Flip(ecran);    // Update the new SDL window
   }
-  if (TTF_Init() == -1) {       // Open the TTF library
+  if (TTF_Init() == -1) {             // Open the TTF library
     errorMSG("Erreur à l'initialisation de la librairie TTF");
     printf("%s\n", SDL_GetError());
+    SDL_Quit();                   // Quit the SDL library
     return ERRORVALUE;
   }
   police = TTF_OpenFont("Police/clootie.otf", 30);      // Get the police file
   code = oscilMatrix(mat1, dim);
-  if (code < 0)
+  if (code < 0) {
+    SDL_Quit();               // Quit the SDL library
+    TTF_CloseFont(police);    // Close the police file
+    TTF_Quit();               // Quit the TTF library
     return ERRORVALUE;
+  }
   sprintf(buffer, "%d", age);
   textSurface = TTF_RenderText_Solid(police, buffer, colortxt);
 
-  while (emptyMatrix(mat1, dim) != 1 && continuer == 1) {    // While the grid is not fully empty and the user didn't ask for leaving
+  while (continuer == 1) {    // While the user don't ask for leaving
     SDL_PollEvent(&event);
     switch(event.type) {    // Ask for leaving the SDL while the grid is running
       case SDL_QUIT:
         continuer = 0;
         break;
     }
-    for (i = 0; i < nb_cells; i++) {
-      code = coordonneeCalc(&position, &pixel, mat1, dim, i);   // Calcule les coordonnées graphique de la cellule, et la couleur qu'elle doit avoir
-      if (code < 0)
-        return ERRORVALUE;
-      SDL_FillRect(cellule[i], NULL, SDL_MapRGB(ecran->format, pixel, pixel, pixel));   // Met à jour les paramètres de la cellule
-      SDL_BlitSurface(cellule[i], NULL, ecran, &position);      // Add the cell to the SDL window
-    }
-    SDL_Flip(ecran);    // Update the SDL window for cells
 
-    position.x = 5;    // Position of the generation number
-    position.y = 2;
-    SDL_BlitSurface(textSurface, NULL, ecran, &position);     // Add the number of generations to the SDL window
-    SDL_Flip(ecran);        // Update the SDL window for the generation number
-    actualtime = SDL_GetTicks();      // Temps actuel depuis le début de l'exécution du programme
-
-    if (actualtime - prevtime > WAITTIME) {     // Si le temps d'attente est dépassé
+    actualtime = SDL_GetTicks();                  // Actual time since the beginning of the execution of the programm
+    if (actualtime - prevtime > WAITTIME) {     // If the waiting time limit has been reached
+      age++;                                       // Incremente the generation number
       sprintf(buffer, "%d", age);
       textSurface = TTF_RenderText_Solid(police, buffer, colortxt);
 
       prevtime = actualtime;          // Previous time becomes the actual time reference
+
+      for (i = 0; i < nb_cells; i++) {
+        code = coordonneeCalc(&position, &pixel, mat1, dim, i);   // Compute cordinates and color for cell i
+        if (code < 0) {
+          SDL_Quit();                // Quit the SDL library
+          TTF_CloseFont(police);    // Close the police file
+          TTF_Quit();               // Quit the TTF library
+          return ERRORVALUE;
+        }
+        SDL_FillRect(cellule[i], NULL, SDL_MapRGB(ecran->format, pixel, pixel, pixel));   // Update the new parameters for cell i
+        SDL_BlitSurface(cellule[i], NULL, ecran, &position);                             // Add the cell to the SDL window
+      }
+      SDL_Flip(ecran);    // Update the SDL window for cells
+
+      position.x = 5;    // Position of the generation number
+      position.y = 2;
+      SDL_BlitSurface(textSurface, NULL, ecran, &position);     // Add the number of generations to the SDL window
+      SDL_Flip(ecran);        // Update the SDL window for the generation number
+
+      if (emptyMatrix(mat1, dim))   // If the cells matrix is fully empty
+        break;
+
       code = newMatrix(&mat1, dim);     // Compute the next cells generation
-      if (code < 0)
+      if (code < 0) {
+        for (i = 0; i < DIMH*DIMX; i++) {
+          SDL_FreeSurface(cellule[i]);      // Free all the cells
+        }
+        SDL_FreeSurface(ecran);   // Free the global SDL window
+        SDL_Quit();                // Quit the SDL library
+        TTF_CloseFont(police);    // Close the police file
+        TTF_Quit();                // Quit the TTF library
         return ERRORVALUE;
+      }
       if (code == 1)          // Stable configuration has been detected
         break;
-      age++;                            // Incremente the generation number
       code = oscilMatrix(mat1, dim);      // To detect matrix oscillations
-      if (code < 0)
+      if (code < 0) {
+        for (i = 0; i < DIMH*DIMX; i++) {
+          SDL_FreeSurface(cellule[i]);      // Free all the cells
+        }
+        SDL_FreeSurface(ecran);   // Free the global SDL window
+        SDL_Quit();               // Quit the SDL library
+        TTF_CloseFont(police);    // Close the police file
+        TTF_Quit();               // Quit the TTF library
         return ERRORVALUE;
+      }
       if (code == 1)          // Matrix oscillation detected : count is incremented
         printf("Matrix oscillation has been detected at age %d !\n", age-1);
-      if (age > 160) break;
+      if (age > 60)      // for Debug
+        break;
     }
 
     else
       SDL_Delay(WAITTIME - (actualtime - prevtime));    // endort le processus pour libérer le CPU provisoirement
+
   }
 
   pauseSDL();     // Fully empty grid reached, waiting for closing the SDL window
@@ -195,7 +228,6 @@ int playGame(mat mat1, dimensions dim) {
   SDL_FreeSurface(ecran);   // Free the global SDL window
 
   TTF_CloseFont(police);    // Close the police file
-
   SDL_Quit();     // Quit the SDL library
   TTF_Quit();     // Quit the TTF library
   return 0;

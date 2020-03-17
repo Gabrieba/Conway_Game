@@ -112,7 +112,7 @@ void matrixToRLE(char* conf, mat mat1, dimensions dim) {
 int oscilMatrix(mat mat1, dimensions dim) {
   int nbconf = 0;
   char line[256];
-  char* conf = calloc( dim.width, sizeof(*conf));
+  char* conf = calloc(1600, sizeof(*conf));
   if (conf == NULL) {
     errorMSG("Erreur lors d'une allocation dynamique pour la détection d'oscillations");
     return ERRORVALUE;

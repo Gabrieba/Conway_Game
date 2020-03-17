@@ -231,6 +231,7 @@ int executecmd(char* cmd, char* filename, mat* mat1, dimensions* dim, int bit_lo
       return ERRORSTRING;
     }
     code = playGame(*mat1, *dim);
+    system("rm tmp.rle");         // Remove temporary RLE file which contains all the RLE configurations of the previous game
     if (code < 0) {
       destroyMatrix(mat1);
       return ERRORVALUE;
