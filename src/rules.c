@@ -4,6 +4,8 @@
 #include "../include/main.h"
 
 
+// Compute the number of neighbours alive around the cell
+// Note : the grid is cyclic
 int calculNeighbours(mat mat1, dimensions dim, int i, int j) {
   int xposition, hposition;
   int res = 0;
@@ -57,6 +59,7 @@ int calculNeighbours(mat mat1, dimensions dim, int i, int j) {
 
 
 
+// Copy the matrix mat1 in the matrix pmat
 void copyMatrix(mat* pmat, mat* mat1, dimensions dim) {
   int i, j;
   for (i = 0; i < dim.height; i++) {
@@ -67,6 +70,11 @@ void copyMatrix(mat* pmat, mat* mat1, dimensions dim) {
 }
 
 
+
+// Calculate the new matrix by applying the rules
+// Return -1 if an error has occured
+// Return 1 if a stable configuration has been detected
+// Return 0 otherwise
 int newMatrix(mat* pmat, dimensions dim) {
   int i, j, res, code;
   mat mat1;
@@ -80,22 +88,25 @@ int newMatrix(mat* pmat, dimensions dim) {
       res = calculNeighbours(*pmat, dim, i, j);
       if (res < 0 || res > 8) {
         errorMSG("Nombre de voisins absurde");
-        return -1;
+        return ERRORVALUE;
       }
-      if ((*pmat)[i][j] == 49) {   // Si la cellule est initialement vivante
+      if ((*pmat)[i][j] == 49) {   // If the cell is initially alive
         if (res > 3 || res < 2) mat1[i][j] = 48;    // Mort par etouffement ou isolement
         else mat1[i][j] = 49;
       }
-      else {    // Si la cellule est initialement morte
+      else {    // If the cell is initially dead
         if (res == 3) {
-          mat1[i][j] = 49;      // Naissance
+          mat1[i][j] = 49;      // Birth
         }
         else mat1[i][j] = 48;
       }
 
     }
   }
-  copyMatrix(pmat, &mat1, dim);
-  destroyMatrix(&mat1);
+  if (compareMatrix(*pmat, mat1, dim))     // Stable configuration has been detected
+    return 1;
+
+  copyMatrix(pmat, &mat1, dim);   // Update the new matrix in the current matrix
+  destroyMatrix(&mat1);       // Destroy the temporary matrix
   return 0;
 }

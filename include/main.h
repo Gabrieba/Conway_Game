@@ -33,6 +33,7 @@ void helpCommand(int bit_load);
 int stringStandardise(char* cmd, char* filename);
 int loadGrid(char* filename, mat* pgrid, dimensions* dim);
 int emptyMatrix(mat grid, dimensions dim);
+int compareMatrix(mat mat1, mat mat2, dimensions dim);
 void printMatrix(mat grid, dimensions dim);
 int createMatrix(mat* pmat);
 void destroyMatrix(mat* pmat);

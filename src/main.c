@@ -10,6 +10,7 @@
 #include "../include/main.h"
 #include "../include/affichage.h"
 #include "../include/rules.h"
+#include "../include/oscillat.h"
 
 
 
@@ -61,7 +62,7 @@ int loadGrid(char* filename, mat* pgrid, dimensions* dim) {
   fgets(chaine, 128, f1);   // Lecture ligne commentaire
   fscanf(f1, "%d %d", &height, &width);   // Lecture des dimensions
   if (height > DIMH || width > DIMX) {
-    warningMSG("Matrice trop grande; veuillez changer DIMH et/ou DIMX dans main.h");
+    warningMSG("Matrice trop grande; veuillez changer 'DIMH' et/ou 'DIMX' dans main.h");
     return ERRORSTRING;
   }
   dim->height = height;
@@ -112,6 +113,18 @@ int emptyMatrix(mat grid, dimensions dim) {
 }
 
 
+
+// Return 1 if the two matrix are equal, 0 otherwise
+int compareMatrix(mat mat1, mat mat2, dimensions dim) {
+  int i, j;
+  for (i = 0; i < dim.height; i++) {
+    for (j = 0; j < dim.width; j++) {
+      if (mat1[i][j] != mat2[i][j])
+        return 0;
+    }
+  }
+  return 1;
+}
 
 
 // Print the matrix in the shell with '0' and '1'
@@ -224,6 +237,16 @@ int executecmd(char* cmd, char* filename, mat* mat1, dimensions* dim, int bit_lo
     }
     return 0;
   }
+  else if (strcmp(cmd, "convert") == 0) {
+    strcat(command, filename);
+    if (system(command) != 0) {   // Teste si la fichier 'filename' existe dans grid/
+      warningMSG("Fichier grille initiale introuvable");
+      return 0;
+    }
+    code = textToRLE(filename);
+    if (code < 0)
+      return ERRORVALUE;
+  }
   else if (strcmp(cmd, "help") == 0) {
     helpCommand(bit_load);
     return 0;
@@ -246,16 +269,16 @@ int stringStandardise(char* cmd, char* filename) {
     return ERRORSTRING;
   strcpy(cmd, strtoken);
   strtoken = strtok(NULL, separators);   // Récupération nom du fichier
-  if (strcmp(cmd, "load") != 0) {
+  if (strcmp(cmd, "load") != 0 && strcmp(cmd, "convert") != 0) {
     if (strtoken != NULL) {
       warningMSG("Trop d'arguments spécifiés");
       return ERRORSTRING;
     }
     return 0;
   }
-  else {        // Commande load
+  else {        // Commande load et convert
     if (strtoken == NULL) {
-      warningMSG("Il manque le nom de la grille à charger");
+      warningMSG("Il manque le nom de la grille à traiter");
       return ERRORSTRING;
     }
     strcpy(filename, strtoken);

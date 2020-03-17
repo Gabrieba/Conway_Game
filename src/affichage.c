@@ -6,6 +6,7 @@
 #include "../include/main.h"
 #include "../include/affichage.h"
 #include "../include/rules.h"
+#include "../include/oscillat.h"
 
 
 void pauseSDL(void) {
@@ -78,8 +79,8 @@ int dispGrid(mat mat1, dimensions dim) {
     SDL_FillRect(cellule[i], NULL, SDL_MapRGB(ecran->format, pixel, pixel, pixel));
     SDL_BlitSurface(cellule[i], NULL, ecran, &position);
   }
-  SDL_Flip(ecran);    // Mise à jour de l'écran
-  pauseSDL();     // Attente
+  SDL_Flip(ecran);    // Update the SDL window
+  pauseSDL();     // Wait for a response from the user
 
   for (i = 0; i < DIMH*DIMX; i++) {
     SDL_FreeSurface(cellule[i]);
@@ -136,6 +137,11 @@ int playGame(mat mat1, dimensions dim) {
     return ERRORVALUE;
   }
   police = TTF_OpenFont("Police/clootie.otf", 30);      // Get the police file
+  code = oscilMatrix(mat1, dim);
+  if (code < 0)
+    return ERRORVALUE;
+  sprintf(buffer, "%d", age);
+  textSurface = TTF_RenderText_Solid(police, buffer, colortxt);
 
   while (emptyMatrix(mat1, dim) != 1 && continuer == 1) {    // While the grid is not fully empty and the user didn't ask for leaving
     SDL_PollEvent(&event);
@@ -143,20 +149,6 @@ int playGame(mat mat1, dimensions dim) {
       case SDL_QUIT:
         continuer = 0;
         break;
-    }
-    actualtime = SDL_GetTicks();      // Temps actuel depuis le début de l'exécution du programme
-    if (actualtime - prevtime > WAITTIME) {     // Si le temps d'attente est dépassé
-      sprintf(buffer, "%d", age);
-      textSurface = TTF_RenderText_Solid(police, buffer, colortxt);
-
-      prevtime = actualtime;          // Ancien temps devient nouveau temps
-      code = newMatrix(&mat1, dim);     // Calcul de la prochaine génération de cellules
-      age++;
-      if (code < 0)
-        return ERRORVALUE;
-    }
-    else {
-      SDL_Delay(WAITTIME - (actualtime - prevtime));    // endort le processus pour libérer le CPU provisoirement
     }
     for (i = 0; i < nb_cells; i++) {
       code = coordonneeCalc(&position, &pixel, mat1, dim, i);   // Calcule les coordonnées graphique de la cellule, et la couleur qu'elle doit avoir
@@ -171,6 +163,29 @@ int playGame(mat mat1, dimensions dim) {
     position.y = 2;
     SDL_BlitSurface(textSurface, NULL, ecran, &position);     // Add the number of generations to the SDL window
     SDL_Flip(ecran);        // Update the SDL window for the generation number
+    actualtime = SDL_GetTicks();      // Temps actuel depuis le début de l'exécution du programme
+
+    if (actualtime - prevtime > WAITTIME) {     // Si le temps d'attente est dépassé
+      sprintf(buffer, "%d", age);
+      textSurface = TTF_RenderText_Solid(police, buffer, colortxt);
+
+      prevtime = actualtime;          // Previous time becomes the actual time reference
+      code = newMatrix(&mat1, dim);     // Compute the next cells generation
+      if (code < 0)
+        return ERRORVALUE;
+      if (code == 1)          // Stable configuration has been detected
+        break;
+      age++;                            // Incremente the generation number
+      code = oscilMatrix(mat1, dim);      // To detect matrix oscillations
+      if (code < 0)
+        return ERRORVALUE;
+      if (code == 1)          // Matrix oscillation detected : count is incremented
+        printf("Matrix oscillation has been detected at age %d !\n", age-1);
+      if (age > 160) break;
+    }
+
+    else
+      SDL_Delay(WAITTIME - (actualtime - prevtime));    // endort le processus pour libérer le CPU provisoirement
   }
 
   pauseSDL();     // Fully empty grid reached, waiting for closing the SDL window
