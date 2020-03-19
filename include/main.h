@@ -12,6 +12,7 @@
 #define STYLE_OFF     0x00
 #define COLOR_RED     31
 #define COLOR_YELLOW  33
+#define COLOR_BLUE    36
 
 
 enum cell_state {ALIVE = 1, DEAD = 0};    // States of a cell
@@ -29,6 +30,7 @@ typedef struct {
 /* Function prototypes */
 void errorMSG(char* msg);
 void warningMSG(char* msg);
+void infoMSG(char* msg);
 void helpCommand(int bit_load);
 int stringStandardise(char* cmd, char* filename);
 int loadGrid(char* filename, mat* pgrid, dimensions* dim);

@@ -27,6 +27,7 @@ int textToRLE(char* fichier) {
   puts(file);
   FILE* f1 = fopen(file, "w");
   if (f1 == NULL) {
+    fclose(fp);
     errorMSG("Erreur lors de la création du fichier RLE");
     return ERRORVALUE;
   }
@@ -106,34 +107,41 @@ void matrixToRLE(char* conf, mat mat1, dimensions dim) {
 
 
 
-// Return 1 if the grid configuration has already been saved in the RLE file
+// Return the oscillation period (> 0) if the grid configuration has already been saved in the RLE file
 // Return ERRORVALUE if an error has occured
 // Otherwise save the new grid configuration in the RLE file at the end and return 0
 int oscilMatrix(mat mat1, dimensions dim) {
-  int nbconf = 0;
+  int nbconf = 0; int period = 0;
   char line[256];
-  char* conf = calloc(1600, sizeof(*conf));
+  char* conf = calloc(1600, sizeof(*conf));     // Contains the RLE code of the matrix
   if (conf == NULL) {
     errorMSG("Erreur lors d'une allocation dynamique pour la détection d'oscillations");
     return ERRORVALUE;
   }
-  FILE* f1 = fopen("tmp.rle", "a+");
+  FILE* f1 = fopen("tmp.rle", "a+");      // Open the temporary RLE file to store each previous RLE code
   if (f1 == NULL) {
     errorMSG("Erreur lors de l'ouverture du fichier intermédiaire");
+    free(conf);
     return ERRORVALUE;
   }
-  matrixToRLE(conf, mat1, dim);        // Compute the RLE configuration of the matrix and store it in "conf"
+  matrixToRLE(conf, mat1, dim);              // Compute the RLE code of the matrix and store it in "conf"
   while (fgets(line, 1600, f1) != NULL) {      // While a matrix configuration can be read in the RLE file
-    nbconf ++;
-    line[strlen(line)-1] = '\0';      // In order to delete the carriage return at the end of 'line'
-    if (strcmp(line, conf) == 0) {    // The same RLE configuration has already been saved previously
-      return 1;
+    nbconf++;
+    line[strlen(line)-1] = '\0';           // In order to delete the carriage return at the end of 'line'
+    if (strcmp(line, conf) == 0) {         // The same RLE configuration has already been saved previously
+      period = nbconf;
+      while (fgets(line, 1600, f1) != NULL) {     // To reach the end of the RLE file, in order to count the total number of RLE configurations
+        nbconf++;
+      }
+      free(conf);
+      fclose(f1);
+      return (nbconf - period + 1);
     }
   }
-  if (nbconf < MAXCONF)       // Number of RLE configurations is limited to MAXCONF, large enough to detect any matrix oscillation I think
+  if (nbconf < MAXCONF)             // Number of RLE configurations is limited to MAXCONF, large enough to detect any matrix oscillation I think
     fprintf(f1, "%s\n", conf);
   else {
-    rewind(f1);         // Return to the beginning of the file, to delete the oldest RLE configuration
+    rewind(f1);                  // Return to the beginning of the file, to delete the oldest RLE configuration
     fprintf(f1, "%s\n", conf);
   }
   free(conf);

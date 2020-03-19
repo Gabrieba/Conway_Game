@@ -1,38 +1,44 @@
 
------ UTILISATION -----
-Les grilles initiales sont placées dans grid/ au format .txt
-Un commentaire sur la première ligne de ce fichier
-Les dimensions de la grille en nombre de cellules sur la deuxième ligne
-Les cellules sont représentées par une matrice d'états binaires : 1 <=> vivant et 0 <=> mort
+----- USE -----
 
-Dans l'interpréteur :
-load <file.txt>       pour charger la grille initiale dans l'interpréteur
-                      Ce fichier .txt doit être contenu dans le dossier grid/
+The initial grids are placed in the folder '/grid' in '.txt' format
+On the first line, a comment to specify the nature of the file
+On the second line, the grid dimensions in number of cells
+Cells are represented by a matrix of binary states: 1 <=> alive and 0 <=> dead
 
-disp                  pour afficher la grille sous format graphique (statique)
+Commands avalaible in the shell :
 
-run                   pour appliquer la règle sur une génération (sans affichage graphique)
+load <file.txt>         to load the initial grid in the interpreter
+                        This '.txt' file must be contained in the folder '/grid'
 
-play                  pour jouer la grille préalablement chargée selon la règle commune (avec affichage graphique)
-                      Ne s'arrête que lorsque la grille est vide
+disp                    to display the grid through a SDL graphic window (static)
 
-convert <file.txt>    pour convertir un fichier .txt contenant une grille initale en un fichier .rle
-                      Ce fichier .txt doit être contenu dans le dossier grid/
+run                     to apply the rule on a generation (without graphic display)
 
-exit                  pour quitter l'interpréteur de commande
+play                    to play the grid previously loaded according to the common rule (with SDL graphic display)
+                        It stops when the grid is empty or
 
-help                  pour obtenir de l'aide
+convert <file.txt>      to convert a '.txt' file containing an initial grid to a '.rle' file
+                        This '.txt' file must be contained in the folder '/grid'
 
+exit                    to quit the shell
 
-
------ PROCHAINES MISES A JOUR -----
-La résolution (et les dimensions) de la fenêtre graphique s'adapteront aux dimensions de la matrice
-Les grilles initiales pourront être au format RLE, format plus compact
-Ajout de règles supplémentaires
-Implantation de structures usuelles (canons, planeurs, ...)
-Détecteur de structures oscillantes
+help                    Provide a helpful guide
 
 
------ GRANDES AMBITIONS -----
-Détection d'un jardin d'Eden de Conway
-Implantation de portes logiques...
+
+
+----- NEXT UPDATES -----
+
+The resolution (and dimensions) of the graphics window will be automatically adapted to the dimensions of the matrix
+The initial grids could be in RLE format, more compact format
+Addition of additional rules
+Creation of the initial grids through a graphic window
+
+
+
+
+----- GREAT AMBITIONS -----
+
+Detection of 'Jardin d'Eden de Conway'
+Implementation of logic gates ...

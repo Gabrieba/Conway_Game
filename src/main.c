@@ -3,7 +3,7 @@
 #include <string.h>
 #include <errno.h>
 
-/* la librairie readline */
+/* The Readline library */
 #include <readline/readline.h>
 #include <readline/history.h>
 
@@ -28,20 +28,28 @@ void warningMSG(char* msg) {
 }
 
 
-// Affiche une aide pour l'utilisateur
+void infoMSG(char* msg) {
+  fprintf(stdout, "%c[%d;%dm", 0x1B, STYLE_BOLD, COLOR_BLUE);   // Set to bold blue letters
+  printf("INFO : %s\n", msg);
+  fprintf(stdout, "%c[%dm", 0x1B, 0);   // Reset
+}
+
+
+
+// Disp a helpful guide for the user in the shell
 void helpCommand(int bit_load) {
   puts("");
-  puts("Dans l'interpréteur de commandes :");
-  puts("load <file.txt>    pour charger la grille initiale dans l'interpréteur (inutile d'indiquer son dossier grid/)");
-  puts("disp               pour afficher la grille sous format graphique");
-  puts("run                pour appliquer la règle sur une génération (sans affichage graphique)");
-  puts("play               pour jouer la grille préalablement chargée selon la règle commune sur N générations (avec affichage graphique) \n \t\t\tLa macro N est spécifiée dans 'affichage.h'");
-  puts("exit               pour quitter l'interpréteur");
+  puts("In the command shell :");
+  puts("load <file.txt>    to load the initial grid in the shell (don't indicate the folder '/grid')");
+  puts("disp               to print a grid with a graphic display");
+  puts("run                to apply the rules on a cells matrix over 1 generation (without graphic display)");
+  puts("play               to play the grid (previously loaded in the shell) over multiple generations (with graphic display)\n");
+  puts("exit               to quit the shell");
   puts("");
   if (bit_load)
-    puts("Actuellement, une grille initiale a bien été chargée dans l'interpréteur");
+    infoMSG("Actually, an initial grid has successfully been loaded in the shell");
   else
-    warningMSG("Actuellement, aucune grille initiale n'a été chargée dans l'interpréteur; commencez avec 'load'");
+    warningMSG("Actually, no initial grid has been loaded in the shell; please use the command 'load ...'");
   puts("");
 }
 
@@ -127,6 +135,7 @@ int compareMatrix(mat mat1, mat mat2, dimensions dim) {
 }
 
 
+
 // Print the matrix in the shell with '0' and '1'
 void printMatrix(mat grid, dimensions dim) {
   int i, j;
@@ -141,16 +150,18 @@ void printMatrix(mat grid, dimensions dim) {
 
 
 
-// Alloue de l'espace pour la matrice
+// Allocate dynamic memory to the cells matrix
+// Return ERRORVALUE if an error has occured
+// Return 0 otherwise
 int createMatrix(mat* pmat) {
     int i;
-    *pmat = malloc(DIMH * sizeof *(*pmat));
+    *pmat = malloc(DIMH * sizeof *(*pmat));     // Allocate an array of cells lines
     if (*pmat == NULL) {
         errorMSG("Allocation mémoire impossible pour la matrice");
         return ERRORVALUE;
     }
     for (i = 0; i < DIMH; i++) {
-      (*pmat)[i] = calloc(DIMX, sizeof *(*pmat)[i]);
+      (*pmat)[i] = calloc(DIMX, sizeof *(*pmat)[i]);    // Allocate a cells line
       if ((*pmat)[i] == NULL) {
         errorMSG("Allocation mémoire impossible pour la matrice");
         return ERRORVALUE;
@@ -161,7 +172,7 @@ int createMatrix(mat* pmat) {
 
 
 
-// Libère la matrice allouée
+// Free the allocated matrix
 void destroyMatrix(mat* pmat) {
   int i;
   for (i = 0; i < DIMH; i++)
@@ -230,7 +241,7 @@ int executecmd(char* cmd, char* filename, mat* mat1, dimensions* dim, int bit_lo
       warningMSG("Veuillez charger une grille initiale avant de l'exécuter");
       return ERRORSTRING;
     }
-    code = playGame(*mat1, *dim);
+    code = playGame(*mat1, *dim);     // Play with the grid 'mat1' and a graphic display
     system("rm tmp.rle");         // Remove temporary RLE file which contains all the RLE configurations of the previous game
     if (code < 0) {
       destroyMatrix(mat1);
@@ -240,11 +251,11 @@ int executecmd(char* cmd, char* filename, mat* mat1, dimensions* dim, int bit_lo
   }
   else if (strcmp(cmd, "convert") == 0) {
     strcat(command, filename);
-    if (system(command) != 0) {   // Teste si la fichier 'filename' existe dans grid/
+    if (system(command) != 0) {           // Check wether the file is in the folder '/grid' or not
       warningMSG("Fichier grille initiale introuvable");
       return 0;
     }
-    code = textToRLE(filename);
+    code = textToRLE(filename);     // Convert the file .txt to RLE file
     if (code < 0)
       return ERRORVALUE;
   }
@@ -260,31 +271,33 @@ int executecmd(char* cmd, char* filename, mat* mat1, dimensions* dim, int bit_lo
 
 
 
-// Récupère la commande et le nom du fichier si besoin
+// Recover the command through 'cmd' and the filename (if it exists) through 'filename'
+// Return ERRORSTRING if an error occured because of the user
+// Return 0 otherwise
 int stringStandardise(char* cmd, char* filename) {
   const char* separators = " -";
-  char* str;
+  char* str;                // Local variable used by strtok
   strcpy(str, cmd);
-  char* strtoken = strtok(str, separators);   // Récupération commande
-  if (strtoken == NULL)       // Commande vide
+  char* strtoken = strtok(str, separators);   // Get the user command
+  if (strtoken == NULL)       // Empty command
     return ERRORSTRING;
-  strcpy(cmd, strtoken);
-  strtoken = strtok(NULL, separators);   // Récupération nom du fichier
-  if (strcmp(cmd, "load") != 0 && strcmp(cmd, "convert") != 0) {
-    if (strtoken != NULL) {
+  strcpy(cmd, strtoken);         // Store the user command
+  strtoken = strtok(NULL, separators);   // Get the filename
+  if (strcmp(cmd, "load") != 0 && strcmp(cmd, "convert") != 0) {      //If the user command isn't 'load' or 'convert'
+    if (strtoken != NULL) {                     // Too much arguments
       warningMSG("Trop d'arguments spécifiés");
       return ERRORSTRING;
     }
     return 0;
   }
-  else {        // Commande load et convert
+  else {        // for commands 'load' and 'convert'
     if (strtoken == NULL) {
       warningMSG("Il manque le nom de la grille à traiter");
       return ERRORSTRING;
     }
-    strcpy(filename, strtoken);
-    strtoken = strtok(NULL, separators);   // On regarde en 3eme position
-    if (strtoken != NULL) {
+    strcpy(filename, strtoken);         // Store the filename
+    strtoken = strtok(NULL, separators);      // Check if something is written after the filename
+    if (strtoken != NULL) {               // Too much arguments
       warningMSG("Trop d'arguments spécifiés");
       return ERRORSTRING;
     }
@@ -294,48 +307,50 @@ int stringStandardise(char* cmd, char* filename) {
 
 
 
-// Code principal + gestion des erreurs
+// Main programm + errors handler
+// Return EXIT_FAILURE if an other function returns ERRORVALUE
+// Return EXIT_SUCCESS if the user asks to quit the shell
 int main(int argc, char* argv[]) {
   int code; int bit_load = 0;
   mat mat1;
   dimensions dim;
   puts("\n \t \t WELCOME TO CONWAY'S GAME");
-  char* cmd = calloc(128, sizeof(*cmd));
+  char* cmd = calloc(128, sizeof(*cmd));          // Dynamic memory for user command
   if (cmd == NULL) {
     errorMSG("Erreur lors de l'allocation mémoire de commande.");
     exit(EXIT_FAILURE);
   }
-  char* filename = calloc(128, sizeof(*filename));
+  char* filename = calloc(128, sizeof(*filename));      // Dynamic memory for the filename
   if (cmd == NULL) {
     errorMSG("Erreur lors de l'allocation mémoire de nom de fichier.");
     exit(EXIT_FAILURE);
   }
 
   while(1) {
-    cmd = readline("Shell : > ");
+    cmd = readline("Shell : > ");             // Get the user command
     code = stringStandardise(cmd, filename);
-    if (code == 0)
-      code = executecmd(cmd, filename, &mat1, &dim, bit_load);
-    cmd[0] = '\0';
-    filename[0] = '\0';
-    switch(code) {      // Gestion des erreurs
-      case 0 :
+    if (code == 0)                                     // If no error has occured
+      code = executecmd(cmd, filename, &mat1, &dim, bit_load);        // Execute the user command
+    cmd[0] = '\0';            // Erase the previous command
+    filename[0] = '\0';       // Erase the previous filename
+    switch(code) {      // Errors handler
+      case 0 :          // No error
         break;
-      case ERRORSTRING :    // Faute de frappe commandes
+      case ERRORSTRING :    // Typo in a user command
         break;
-      case EXITVALUE :
+      case EXITVALUE :      // The user asks to quit the shell
         free(cmd);
         free(filename);
         exit(EXIT_SUCCESS);
-      case LOADVALUE :    // L'utilisateur a chargé sa grille initiale
+      case LOADVALUE :    // The user has loaded his initial grid
         bit_load = 1;
         break;
-      case ERRORVALUE:
+      case ERRORVALUE:      // An error has occured in an other function
         puts("Erreur détectée");
         free(cmd);
         free(filename);
         exit(EXIT_FAILURE);
-      default :
+      default :                 // Error occured in the errors handler
         errorMSG("Code de retour inconnu");
         free(cmd);
         free(filename);

@@ -9,6 +9,9 @@
 #include "../include/oscillat.h"
 
 
+
+// Pause the graphic SDL display
+// Wait the user request to quit the SDL window
 void pauseSDL(void) {
   int etat = 1;
   SDL_Event event;
@@ -22,34 +25,42 @@ void pauseSDL(void) {
 }
 
 
+
+// Compute the position of cell number 'rang' and store it in 'pposition'
+// Compute the color of the cell according to its state and store it in 'pixel'
+// Return ERRORVALUE if an error has occured
+// Return 0 otherwise
 int coordonneeCalc(SDL_Rect* pposition, unsigned int* pixel, mat mat1, dimensions dim, int rang) {
   int i, j;
   i = rang / dim.width;
   j = (rang % dim.width);
-  if (i < 0 || i > dim.height || j < 0 || j > dim.width) {
+  if (i < 0 || i > dim.height || j < 0 || j > dim.width) {      // if the previous calculations are absurd ; for DEBUG
     errorMSG("Erreur dans le calcul des coordonnées");
     printf("i = %d et j = %d (WIDTH=%d et HEIGHT=%d)\n", i, j, dim.width, dim.height);
     printf("rang = %d\n", rang);
-    return -1;
+    return ERRORVALUE;
   }
-  if (mat1[i][j] == '1')    // Cellule vivante
-    *pixel = 0;     // Couleur = noir
-  else if(mat1[i][j] == '0')    // Cellule morte
-    *pixel = 255;       // Couleur = blanc
+  if (mat1[i][j] == '1')         // Alive cell
+    *pixel = 0;                 // Color = black
+  else if(mat1[i][j] == '0')    // Dead cell
+    *pixel = 255;               // Color = white
   else {
     errorMSG("Erreur dans la valeur des coefficients de la matrice");
     return ERRORVALUE;
   }
-  pposition->x = j*(XWINDOW / dim.width);
-  pposition->y = i*(HWINDOW / dim.height);
+  pposition->x = j*(XWINDOW / dim.width);     // Horizontal position of cell (i, j)
+  pposition->y = i*(HWINDOW / dim.height);    // Vertical position of cell (i, j)
   return 0;
 }
 
 
 
+
+// Disp the grid 'mat1' with a graphic display
+// Return ERRORVALUE if an error has occured, 0 otherwise
 int dispGrid(mat mat1, dimensions dim) {
   SDL_Surface* ecran = NULL;
-  int nb_cells = (dim.height)*(dim.width);
+  int nb_cells = (dim.height)*(dim.width);        // Total number of cells
   SDL_Surface* cellule[DIMH*DIMX] = {NULL};
   SDL_Rect position;
   int i, xlarge, hlarge, code;
@@ -66,8 +77,8 @@ int dispGrid(mat mat1, dimensions dim) {
     printf("%s\n", SDL_GetError());
     return ERRORVALUE;
   }
-  xlarge = XWINDOW / (dim.width);   // Largeur d'une cellule
-  hlarge = HWINDOW / (dim.height);    // Hauteur d'une cellule
+  xlarge = XWINDOW / (dim.width);         // Width of a cell (horizontal dimension)
+  hlarge = HWINDOW / (dim.height);        // Height of a cell (vertical dimension)
   for (i = 0; i < nb_cells; i++) {
     cellule[i] = SDL_CreateRGBSurface(SDL_SWSURFACE, xlarge, hlarge, 32, 0, 0, 0, 0);
   }
@@ -97,11 +108,12 @@ int playGame(mat mat1, dimensions dim) {
   SDL_Event event;
   SDL_Surface* cellule[DIMH*DIMX] = {NULL};
   SDL_Rect position;
-  SDL_Color colortxt = {255, 0, 0};         // Text color to print the number of generations
+  SDL_Color colortxt = {255, 0, 0};         // Text color for number of generations (red)
   SDL_Surface* textSurface = NULL;
   int nb_cells = (dim.height)*(dim.width);    // Total number of cells
-  int continuer = 1; int prevtime = 0; int actualtime = 0; int age = 0;
+  int continuer = 1; int prevtime = 0; int actualtime = 0; int age = 0;       // 'continuer' used to detect the user request to quit the SDL window
   int i, xlarge, hlarge, code;
+  int bitoscill = 0;                // Used to indicate that an oscillation has already been detected
   unsigned int pixel;
   char buffer[1024];
 
@@ -115,13 +127,13 @@ int playGame(mat mat1, dimensions dim) {
   if (ecran == NULL) {
     errorMSG("Erreur à l'ouverture de la fenêtre SDL");
     printf("%s\n", SDL_GetError());
-    SDL_Quit();     // Quit the SDL library
+    SDL_Quit();                      // Quit the SDL library
     return ERRORVALUE;
   }
-  xlarge = XWINDOW / (dim.width);      // Largeur d'une cellule
-  hlarge = HWINDOW / (dim.height);    // Hauteur d'une cellule
+  xlarge = XWINDOW / (dim.width);      // Width of a cell (horizontal dimension)
+  hlarge = HWINDOW / (dim.height);    // Height of a cell (vertical dimension)
   for (i = 0; i < nb_cells; i++) {
-    cellule[i] = SDL_CreateRGBSurface(SDL_SWSURFACE, xlarge, hlarge, 32, 0, 0, 0, 0);   // Création de toutes les cellules
+    cellule[i] = SDL_CreateRGBSurface(SDL_SWSURFACE, xlarge, hlarge, 32, 0, 0, 0, 0);   // Cell SDL surfaces are created
   }
   if (emptyMatrix(mat1, dim) == 1) {   // If matrix fully empty at the beginning
     for (i = 0; i < nb_cells; i++) {
@@ -197,38 +209,43 @@ int playGame(mat mat1, dimensions dim) {
         TTF_Quit();                // Quit the TTF library
         return ERRORVALUE;
       }
-      if (code == 1)          // Stable configuration has been detected
+      if (code == 1)          // Stable configuration has been detected (over 2 successive generations)
         break;
-      code = oscilMatrix(mat1, dim);      // To detect matrix oscillations
-      if (code < 0) {
-        for (i = 0; i < DIMH*DIMX; i++) {
-          SDL_FreeSurface(cellule[i]);      // Free all the cells
+      if (bitoscill == 0) {     // Oscillations detection is triggered only if no oscillation has been detected before
+        code = oscilMatrix(mat1, dim);      // To detect matrix oscillations
+        if (code < 0) {
+          for (i = 0; i < DIMH*DIMX; i++) {
+            SDL_FreeSurface(cellule[i]);      // Free all the cells
+          }
+          SDL_FreeSurface(ecran);   // Free the global SDL window
+          SDL_Quit();               // Quit the SDL library
+          TTF_CloseFont(police);    // Close the police file
+          TTF_Quit();               // Quit the TTF library
+          return ERRORVALUE;
         }
-        SDL_FreeSurface(ecran);   // Free the global SDL window
-        SDL_Quit();               // Quit the SDL library
-        TTF_CloseFont(police);    // Close the police file
-        TTF_Quit();               // Quit the TTF library
-        return ERRORVALUE;
+        if (code > 0)  {        // Matrix oscillation detected : 'code' contains the period
+          bitoscill = 1;
+          infoMSG("Matrix oscillations has been detected !");
+          printf("Period = %d\n", code);
+        }
       }
-      if (code == 1)          // Matrix oscillation detected : count is incremented
-        printf("Matrix oscillation has been detected at age %d !\n", age-1);
-      if (age > 60)      // for Debug
+      if (age > 40)      // for Debug
         break;
     }
 
     else
-      SDL_Delay(WAITTIME - (actualtime - prevtime));    // endort le processus pour libérer le CPU provisoirement
+      SDL_Delay(WAITTIME - (actualtime - prevtime));    // Puts the process to sleep
 
   }
 
-  pauseSDL();     // Fully empty grid reached, waiting for closing the SDL window
+  pauseSDL();                           // Fully empty grid reached, waiting for closing the SDL window
   for (i = 0; i < DIMH*DIMX; i++) {
     SDL_FreeSurface(cellule[i]);      // Free all the cells
   }
   SDL_FreeSurface(ecran);   // Free the global SDL window
 
   TTF_CloseFont(police);    // Close the police file
-  SDL_Quit();     // Quit the SDL library
-  TTF_Quit();     // Quit the TTF library
+  SDL_Quit();             // Quit the SDL library
+  TTF_Quit();              // Quit the TTF library
   return 0;
 }
