@@ -5,11 +5,14 @@
 #define XWINDOW 640   // Width of the SDL window (in pixels)
 #define HWINDOW 640   // Height of the SDL window (in pixels)
 
+#define STRIPELARGE 1   // Width of a stripe (horizontal and vertical) (in pixels)
+
 #define WAITTIME    600   // Waiting time (in ms) between two SDL updates
 
 
 /* Function prototypes */
+int initGrid(mat* mat1, dimensions dim);
 int dispGrid(mat mat1, dimensions dim);
 void pauseSDL(void);
-int coordonneeCalc(SDL_Rect* pposition, unsigned int* pixel, mat mat1, dimensions dim, int rang);
+int parametersCell(SDL_Rect* pposition, unsigned int* pixel, mat mat1, dimensions dim, int rang);
 int playGame(mat mat1, dimensions dim);

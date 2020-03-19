@@ -39,4 +39,4 @@ int compareMatrix(mat mat1, mat mat2, dimensions dim);
 void printMatrix(mat grid, dimensions dim);
 int createMatrix(mat* pmat);
 void destroyMatrix(mat* pmat);
-int executecmd(char* cmd, char* filename, mat* mat1, dimensions* dim, int bit_load);
+int executecmd(char* cmd, char* filename, mat* mat1, dimensions* dim, int* bit_load);

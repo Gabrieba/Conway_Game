@@ -54,12 +54,13 @@ void helpCommand(int bit_load) {
 }
 
 
-// Charge une grille initiale dans l'interpréteur depuis un fichier
-// Le contenu est chargé dans 'pgrid', ses dimensions dans 'dim'
+// Load an initial grid in the shell from a '.txt' file
+// The matrix is loaded in 'pgrid', its dimensions are loaded in 'dim'
+// Return ERRORVALUE if an error has occured, 0 otherwise
 int loadGrid(char* filename, mat* pgrid, dimensions* dim) {
   FILE* f1; int i, j, width, height;
   char chaine[256];
-  char file[15] = "grid/";    // Nom du dossier
+  char file[15] = "grid/";    // Folder name
   enum cell_state state;
   strcat(file, filename);
   f1 = fopen(file, "r");
@@ -67,26 +68,25 @@ int loadGrid(char* filename, mat* pgrid, dimensions* dim) {
     errorMSG("Ouverture du fichier grille initiale impossible");
     return ERRORVALUE;
   }
-  fgets(chaine, 128, f1);   // Lecture ligne commentaire
-  fscanf(f1, "%d %d", &height, &width);   // Lecture des dimensions
+  fgets(chaine, 128, f1);             // Read the comment in the first line
+  fscanf(f1, "%d %d", &height, &width);   // Read the dimensions and store it 'height' and 'width'
   if (height > DIMH || width > DIMX) {
     warningMSG("Matrice trop grande; veuillez changer 'DIMH' et/ou 'DIMX' dans main.h");
     return ERRORSTRING;
   }
-  dim->height = height;
-  dim->width = width;
-  chaine[0] = '\0';
-  fgets(chaine, 2, f1);   // Lecture du retour chariot pour atteindre le début de la grille
+  dim->height = height;   // Store the matrix height
+  dim->width = width;     // Store the matrix width
+  fgets(chaine, 2, f1);   // Read the carriage return at the end of the second line to reach the beginning of the grid
 
   char line[dim->width];
   for (i = 0; i < dim->height; i++) {
-    if(fgets(line, (dim->width)+2, f1) == NULL) {
+    if(fgets(line, (dim->width)+2, f1) == NULL) {     // Not enough cells lines in the matrix
       errorMSG("Trop peu de lignes de cellules dans la grille");
       return ERRORVALUE;
     }
     for (j = 0; j < dim->width; j++) {
       state = line[j];
-      if (state == '\n' || state == ' ') {
+      if (state == '\n' || state == ' ') {      // Not enough cells in a matrix line
         errorMSG("Trop peu de cellules inscrites dans une ligne de la grille.");
         return ERRORVALUE;
       }
@@ -98,7 +98,7 @@ int loadGrid(char* filename, mat* pgrid, dimensions* dim) {
       (*pgrid)[i][j] = (char) state;
     }
   }
-  if(fgets(line, (dim->width)+2, f1) != NULL) {
+  if(fgets(line, (dim->width)+2, f1) != NULL) {     // Too much cells lines in the matrix
     errorMSG("Trop de lignes de cellules dans la grille");
     return ERRORVALUE;
   }
@@ -150,11 +150,11 @@ void printMatrix(mat grid, dimensions dim) {
 
 
 
-// Allocate dynamic memory to the cells matrix
+// Allocate dynamic memory to the cells matrix, and fill the matrix with zeros
 // Return ERRORVALUE if an error has occured
 // Return 0 otherwise
 int createMatrix(mat* pmat) {
-    int i;
+    int i, j;
     *pmat = malloc(DIMH * sizeof *(*pmat));     // Allocate an array of cells lines
     if (*pmat == NULL) {
         errorMSG("Allocation mémoire impossible pour la matrice");
@@ -166,6 +166,10 @@ int createMatrix(mat* pmat) {
         errorMSG("Allocation mémoire impossible pour la matrice");
         return ERRORVALUE;
       }
+    }
+    for (i = 0; i < DIMH; i++) {
+      for (j = 0; j < DIMX; j++)
+        (*pmat)[i][j] = 48;
     }
     return 0;
 }
@@ -182,69 +186,69 @@ void destroyMatrix(mat* pmat) {
 
 
 
-// Redirige l'exécution du programme vers les fonctions appropriées, suivant la commande rentrée
-// bit_load vaut 1 si l'utilisateur a déjà chargé sa grille initiale dans l'interpréteur, 0 sinon
-int executecmd(char* cmd, char* filename, mat* mat1, dimensions* dim, int bit_load) {
+// Redirects the execution of the program to the appropriate functions, following the user command
+// 'bit_load' is equal to 1 if the user has already loaded his initial grid in the shell, 0 otherwise
+int executecmd(char* cmd, char* filename, mat* mat1, dimensions* dim, int* bit_load) {
   int code;
-  char command[128] = "ls grid | grep ";
-  if (strcmp(cmd, "") == 0) {   // Commande vide
+  char command[128] = "ls grid | grep ";      // UNIX command to find the user initial grid file
+  if (strcmp(cmd, "") == 0) {             // Empty command
     return 0;
   }
   if (strcmp(cmd, "exit") == 0) {
     return EXITVALUE;
   }
   else if (strcmp(cmd, "load") == 0) {
-    code = createMatrix(mat1);
+    code = createMatrix(mat1);            // Create the matrix
     if (code < 0) {
       return ERRORVALUE;
     }
     strcat(command, filename);
-    if (system(command) != 0) {   // Teste si la fichier 'filename' existe dans grid/
+    if (system(command) != 0) {         // Check if the file 'filename' exists in the folder '/grid'
       warningMSG("Fichier grille initiale introuvable");
       return 0;
     }
-    code = loadGrid(filename, mat1, dim);
+    code = loadGrid(filename, mat1, dim);     // load the user grid into the matrix
     if (code != 0) {
-      destroyMatrix(mat1);
+      destroyMatrix(mat1);        // Free the matrix
       return code;
     }
-    printMatrix(*mat1, *dim);
+    printMatrix(*mat1, *dim);     // Disp the cells matrix in the shell
     return LOADVALUE;
   }
   else if (strcmp(cmd, "disp") == 0) {
-    if (bit_load != 1) {
+    if (*bit_load != 1) {                 // If the user didn't load his initial grid before
       warningMSG("Veuillez charger une grille initiale avant de l'afficher");
       return 0;
     }
-    code = dispGrid(*mat1, *dim);
+    code = dispGrid(*mat1, *dim);   // Disp the cells matrix in a SDL graphic window
     if (code < 0) {
-      destroyMatrix(mat1);
+      destroyMatrix(mat1);      // Free the matrix
       return ERRORVALUE;
     }
     return 0;
   }
   else if (strcmp(cmd, "run") == 0) {
-    if (bit_load != 1) {
+    if (*bit_load != 1) {        // If the user didn't load or create his initial grid before
       warningMSG("Veuillez charger une grille initiale avant de l'exécuter");
       return ERRORSTRING;
     }
-    code = newMatrix(mat1, *dim);
+    code = newMatrix(mat1, *dim);     // Get the matrix of the next cells generation and store it in 'mat1'
     if (code < 0) {
-      destroyMatrix(mat1);
+      destroyMatrix(mat1);    // Free the matrix
       return ERRORVALUE;
     }
-    printMatrix(*mat1, *dim);
+    printMatrix(*mat1, *dim);      // Disp the cells matrix in the shell
     return 0;
   }
   else if (strcmp(cmd, "play") == 0) {
-    if (bit_load != 1) {
+    if (*bit_load != 1) {           // No grid previously saved or created
       warningMSG("Veuillez charger une grille initiale avant de l'exécuter");
       return ERRORSTRING;
     }
-    code = playGame(*mat1, *dim);     // Play with the grid 'mat1' and a graphic display
+    code = playGame(*mat1, *dim);     // Play with the grid 'mat1' with a graphic display
     system("rm tmp.rle");         // Remove temporary RLE file which contains all the RLE configurations of the previous game
     if (code < 0) {
-      destroyMatrix(mat1);
+      destroyMatrix(mat1);        // Free the matrix
       return ERRORVALUE;
     }
     return 0;
@@ -253,14 +257,27 @@ int executecmd(char* cmd, char* filename, mat* mat1, dimensions* dim, int bit_lo
     strcat(command, filename);
     if (system(command) != 0) {           // Check wether the file is in the folder '/grid' or not
       warningMSG("Fichier grille initiale introuvable");
-      return 0;
+      return ERRORSTRING;
     }
     code = textToRLE(filename);     // Convert the file .txt to RLE file
     if (code < 0)
       return ERRORVALUE;
+    return 0;
+  }
+  else if (strcmp(cmd, "create") == 0) {
+    dim->width = 40;
+    dim->height = 40;
+    code = createMatrix(mat1);            // Create the matrix
+    if (code < 0)
+      return ERRORVALUE;
+    code = initGrid(mat1, *dim);     // Enable user to create a new initial grid through a SDL graphic interface
+    if (code < 0)
+      return ERRORVALUE;
+    *bit_load = 1;          // The new grid is saved in the shell
+    return 0;
   }
   else if (strcmp(cmd, "help") == 0) {
-    helpCommand(bit_load);
+    helpCommand(*bit_load);          // Provide a helpful guide to the user
     return 0;
   }
   else {
@@ -330,7 +347,7 @@ int main(int argc, char* argv[]) {
     cmd = readline("Shell : > ");             // Get the user command
     code = stringStandardise(cmd, filename);
     if (code == 0)                                     // If no error has occured
-      code = executecmd(cmd, filename, &mat1, &dim, bit_load);        // Execute the user command
+      code = executecmd(cmd, filename, &mat1, &dim, &bit_load);        // Execute the user command
     cmd[0] = '\0';            // Erase the previous command
     filename[0] = '\0';       // Erase the previous filename
     switch(code) {      // Errors handler
