@@ -2,8 +2,9 @@
 #include <stdlib.h>
 #include <SDL/SDL.h>
 
-#define XWINDOW 640   // Width of the SDL window (in pixels)
-#define HWINDOW 640   // Height of the SDL window (in pixels)
+#define XWINDOW 640   // Width of the SDL cells window (in pixels)
+#define HWINDOW 640   // Height of the SDL cells window (in pixels)
+#define XINTERFACE 180
 
 #define STRIPELARGE 1   // Width of a stripe (horizontal and vertical) (in pixels)
 

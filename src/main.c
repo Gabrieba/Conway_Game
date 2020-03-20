@@ -41,6 +41,7 @@ void helpCommand(int bit_load) {
   puts("");
   puts("In the command shell :");
   puts("load <file.txt>    to load the initial grid in the shell (don't indicate the folder '/grid')");
+  puts("create             to create an initial grid with a pleasant graphic interface");
   puts("disp               to print a grid with a graphic display");
   puts("run                to apply the rules on a cells matrix over 1 generation (without graphic display)");
   puts("play               to play the grid (previously loaded in the shell) over multiple generations (with graphic display)\n");
@@ -49,7 +50,7 @@ void helpCommand(int bit_load) {
   if (bit_load)
     infoMSG("Actually, an initial grid has successfully been loaded in the shell");
   else
-    warningMSG("Actually, no initial grid has been loaded in the shell; please use the command 'load ...'");
+    warningMSG("Actually, no initial grid has been loaded in the shell; please use the command 'create' or 'load ...'");
   puts("");
 }
 
@@ -187,7 +188,7 @@ void destroyMatrix(mat* pmat) {
 
 
 // Redirects the execution of the program to the appropriate functions, following the user command
-// 'bit_load' is equal to 1 if the user has already loaded his initial grid in the shell, 0 otherwise
+// 'bit_load' is equal to 1 if the user has already loaded or created his initial grid in the shell, 0 otherwise
 int executecmd(char* cmd, char* filename, mat* mat1, dimensions* dim, int* bit_load) {
   int code;
   char command[128] = "ls grid | grep ";      // UNIX command to find the user initial grid file
@@ -195,6 +196,8 @@ int executecmd(char* cmd, char* filename, mat* mat1, dimensions* dim, int* bit_l
     return 0;
   }
   if (strcmp(cmd, "exit") == 0) {
+    if (*bit_load == 1)
+      destroyMatrix(mat1);
     return EXITVALUE;
   }
   else if (strcmp(cmd, "load") == 0) {
@@ -212,8 +215,9 @@ int executecmd(char* cmd, char* filename, mat* mat1, dimensions* dim, int* bit_l
       destroyMatrix(mat1);        // Free the matrix
       return code;
     }
+    *bit_load = 1;              // Grid loaded in the shell
     printMatrix(*mat1, *dim);     // Disp the cells matrix in the shell
-    return LOADVALUE;
+    return 0;
   }
   else if (strcmp(cmd, "disp") == 0) {
     if (*bit_load != 1) {                 // If the user didn't load his initial grid before
@@ -260,20 +264,27 @@ int executecmd(char* cmd, char* filename, mat* mat1, dimensions* dim, int* bit_l
       return ERRORSTRING;
     }
     code = textToRLE(filename);     // Convert the file .txt to RLE file
-    if (code < 0)
+    if (code < 0) {
+      if (*bit_load == 1)
+        destroyMatrix(mat1);    // Free the matrix
       return ERRORVALUE;
+    }
     return 0;
   }
   else if (strcmp(cmd, "create") == 0) {
     dim->width = 40;
     dim->height = 40;
-    code = createMatrix(mat1);            // Create the matrix
+    if (*bit_load == 1)
+      destroyMatrix(mat1);       // Free the matrix, to erase the previous initial grid
+    code = createMatrix(mat1);            // Create the new matrix
     if (code < 0)
       return ERRORVALUE;
     code = initGrid(mat1, *dim);     // Enable user to create a new initial grid through a SDL graphic interface
-    if (code < 0)
+    if (code < 0) {
+      destroyMatrix(mat1);
       return ERRORVALUE;
-    *bit_load = 1;          // The new grid is saved in the shell
+    }
+    *bit_load = 1;          // The new grid is created and saved in the shell
     return 0;
   }
   else if (strcmp(cmd, "help") == 0) {
@@ -355,20 +366,21 @@ int main(int argc, char* argv[]) {
         break;
       case ERRORSTRING :    // Typo in a user command
         break;
-      case EXITVALUE :      // The user asks to quit the shell
+      case EXITVALUE :      // The user asks to quit the shell ; matrix mat1 already free
         free(cmd);
         free(filename);
         exit(EXIT_SUCCESS);
-      case LOADVALUE :    // The user has loaded his initial grid
-        bit_load = 1;
-        break;
       case ERRORVALUE:      // An error has occured in an other function
         puts("Erreur détectée");
+        if (bit_load == 1)
+          destroyMatrix(&mat1);
         free(cmd);
         free(filename);
         exit(EXIT_FAILURE);
       default :                 // Error occured in the errors handler
         errorMSG("Code de retour inconnu");
+        if (bit_load == 1)
+          destroyMatrix(&mat1);
         free(cmd);
         free(filename);
         exit(EXIT_FAILURE);

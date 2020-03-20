@@ -103,9 +103,10 @@ int newMatrix(mat* pmat, dimensions dim) {
 
     }
   }
-  if (compareMatrix(*pmat, mat1, dim))     // Stable configuration has been detected
+  if (compareMatrix(*pmat, mat1, dim)) {     // Stable configuration has been detected
+    infoMSG("Stable configuration has been detected");
     return 1;
-
+  }
   copyMatrix(pmat, &mat1, dim);   // Update the new matrix in the current matrix
   destroyMatrix(&mat1);       // Destroy the temporary matrix
   return 0;

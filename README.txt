@@ -42,12 +42,16 @@ The initial grids could be in RLE format, more compact format
 Addition of new gaming rules
 Initial grids created through the graphic interface will create a '.txt' file automatically
 Dimensions of the grid can be chosen when using the graphic interface
-A validation button will be added to improve the graphic interface
-
-
+Stable usual structures will be automatically identified when running
 
 
 ----- GREAT AMBITIONS -----
 
 Detection of 'Jardin d'Eden de Conway'
 Implementation of logic gates ...
+
+
+
+---------------------------
+IF YOU WANT TO REPORT A BUG OR AN ERROR, OR JUST TO SUGGEST AN IMPROVEMENT, PLEASE FEEL FREE
+---------------------------

@@ -67,8 +67,13 @@ int initGrid(mat* mat1, dimensions dim) {
   SDL_Surface* cellule[DIMH*DIMX] = {NULL};       // SDL surfaces for cells
   SDL_Surface* stripeh[DIMH-1] = {NULL};      // SDL surfaces for horizontal stripes between cells
   SDL_Surface* stripev[DIMX-1] = {NULL};      // SDL surfaces for vertical stripes between cells
-  SDL_Rect position;
-  SDL_Event event;
+  SDL_Surface* SDLimage = NULL;                // SDL surface for the validation button image
+  SDL_Surface* SDLseparator = NULL;
+  SDL_Surface* SDLtext = NULL;                    // SDL surface for the text
+  SDL_Rect position;        // SDL windows position
+  SDL_Event event;          // Control user events
+  TTF_Font* police = NULL;        // Police for text
+  SDL_Color colortxt = {0, 0, 0};         // Text color (black)
   int i, j, code;
   int continuer = 1;
   int xlarge, hlarge;       // Dimensions of the cell
@@ -79,13 +84,48 @@ int initGrid(mat* mat1, dimensions dim) {
     printf("%s\n", SDL_GetError());
     return ERRORVALUE;
   }
-  ecran = SDL_SetVideoMode(XWINDOW, HWINDOW, 32, SDL_SWSURFACE);      // Window mode configuration
-  SDL_WM_SetCaption("## Conway's game ##", NULL);                 // Title of the SDL window
+  ecran = SDL_SetVideoMode(XWINDOW+XINTERFACE, HWINDOW, 32, SDL_SWSURFACE);      // Window mode configuration
+  SDL_WM_SetCaption("## Conway's game - Grid initialisation ##", NULL);                 // Title of the SDL window
   if (ecran == NULL) {
     errorMSG("Erreur à l'ouverture de la fenêtre SDL");
     printf("%s\n", SDL_GetError());
+    SDL_Quit();                 // Quit the SDL library
     return ERRORVALUE;
   }
+  SDL_FillRect(ecran, NULL, SDL_MapRGB(ecran->format, 255, 255, 240));           // General background of the SDL window
+  SDL_BlitSurface(ecran, NULL, ecran, &position);                                // Add the background to the SDL window
+  SDLimage = SDL_LoadBMP("img/validation.bmp");                                      // Load the validation button image
+  position.x = XWINDOW + 67;                                                  // Position of the validation button
+  position.y = 200;
+  SDL_BlitSurface(SDLimage, NULL, ecran, &position);                          // Add the validation button to the SDL window
+
+  SDLseparator = SDL_CreateRGBSurface(SDL_SWSURFACE, 2*STRIPELARGE, HWINDOW, 32, 0, 0, 0, 0);   // Create a vertical separator between the grid and the interface
+  SDL_FillRect(SDLseparator, NULL, SDL_MapRGB(ecran->format, 0, 0, 0));     // Separator is black
+  position.x = XWINDOW;                                                     // Position of the separator
+  position.y = 0;
+  SDL_BlitSurface(SDLseparator, NULL, ecran, &position);                                // Add the cell to the SDL window
+  if (TTF_Init() == -1) {             // Open the TTF library
+    errorMSG("Erreur à l'initialisation de la librairie TTF");
+    printf("%s\n", SDL_GetError());
+    SDL_FreeSurface(SDLseparator);     // Free the SDL for the separator stripe
+    SDL_FreeSurface(ecran);     // Free the SDL global window
+    SDL_Quit();                   // Quit the SDL library
+    return ERRORVALUE;
+  }
+  police = TTF_OpenFont("Police/clootie.otf", 30);      // Get the police file
+  SDLtext = TTF_RenderText_Solid(police, "Click on the cells", colortxt);
+  position.x = XWINDOW + 6;                                           // Position of the text
+  position.y = 30;
+  SDL_BlitSurface(SDLtext, NULL, ecran, &position);       // Add the text to the SDL window
+  SDLtext = TTF_RenderText_Solid(police, "  To make them", colortxt);
+  position.x = XWINDOW + 10;                                           // Position of the text
+  position.y = 70;
+  SDL_BlitSurface(SDLtext, NULL, ecran, &position);       // Add the text to the SDL window
+  SDLtext = TTF_RenderText_Solid(police, "     alive !", colortxt);
+  position.x = XWINDOW + 10;                                           // Position of the text
+  position.y = 110;
+  SDL_BlitSurface(SDLtext, NULL, ecran, &position);       // Add the text to the SDL window
+
   xlarge = XWINDOW / (dim.width);         // Width of a cell (horizontal dimension)
   hlarge = HWINDOW / (dim.height);        // Height of a cell (vertical dimension)
   for (i = 0; i < nb_cells; i++) {
@@ -95,7 +135,7 @@ int initGrid(mat* mat1, dimensions dim) {
     code = parametersCell(&position, &pixel, *mat1, dim, i);        // Compute cordinates and color for cell i
     if (code < 0)
       return ERRORVALUE;
-    SDL_FillRect(cellule[i], NULL, SDL_MapRGB(ecran->format, 255, 255, 255));     // Cells are initially all dead
+    SDL_FillRect(cellule[i], NULL, SDL_MapRGB(ecran->format, 255, 255, 255));     // Cells are initially all dead (white)
     SDL_BlitSurface(cellule[i], NULL, ecran, &position);                                // Add the cell to the SDL window
   }
 
@@ -130,23 +170,31 @@ int initGrid(mat* mat1, dimensions dim) {
         case SDL_MOUSEBUTTONUP:
           xmouse = event.button.x;                                    // Get the vertical position of the mouse
           hmouse = event.button.y;                                        // Get the horizontal position of the mouse
-          i = (hmouse / hlarge)*dim.width + (xmouse / xlarge);          // Compute the rank of the cell concerned
-          code = parametersCell(&position, &pixel, *mat1, dim, i);        // Compute cordinates for cell 'i', we don't care about the value fo 'pixel' here
-          if (code < 0)
-            return ERRORVALUE;
-          j = xmouse / xlarge;
-          i = hmouse / hlarge;
-          if ((*mat1)[i][j] == 48) {                   // Cell initially dead
-            SDL_FillRect(cellule[i], NULL, SDL_MapRGB(ecran->format, 0, 0, 0));         // Cell 'i' becomes alive
-            (*mat1)[i][j] = 49;                                                       // The cell is set to '1' in the matrix
+          if (xmouse > XWINDOW+67 && xmouse < XWINDOW+125 && hmouse > 200 && hmouse < 234) {    // If the user clicks on the validation button
+            continuer = 0;
+            break;
           }
-          else {            // Cell initially alive
-            SDL_FillRect(cellule[i], NULL, SDL_MapRGB(ecran->format, 255, 255, 255));         // Cell 'i' becomes dead
-            (*mat1)[i][j] = 48;                                                           // The cell is set to '0' in the matrix
+          if (xmouse <= XWINDOW) {        // If the user clicks in the grid
+            i = (hmouse / hlarge)*dim.width + (xmouse / xlarge);          // Compute the rank of the cell concerned
+            code = parametersCell(&position, &pixel, *mat1, dim, i);        // Compute cordinates for cell 'i', we don't care about the value fo 'pixel' here
+            if (code < 0) {
+              continuer = -1;     // An error has occured with 'parametersCell()'
+              break;
+            }
+            j = xmouse / xlarge;
+            i = hmouse / hlarge;
+            if ((*mat1)[i][j] == 48) {                   // Cell initially dead
+              SDL_FillRect(cellule[i], NULL, SDL_MapRGB(ecran->format, 0, 0, 0));         // Cell 'i' becomes alive
+              (*mat1)[i][j] = 49;                                                       // The cell is set to '1' in the matrix
+            }
+            else {            // Cell initially alive
+              SDL_FillRect(cellule[i], NULL, SDL_MapRGB(ecran->format, 255, 255, 255));         // Cell 'i' becomes dead
+              (*mat1)[i][j] = 48;                                                           // The cell is set to '0' in the matrix
+            }
+            SDL_BlitSurface(cellule[i], NULL, ecran, &position);                        // Add the cell to the SDL window
+            SDL_Flip(ecran);                                                        // Update the SDL window
+            break;
           }
-          SDL_BlitSurface(cellule[i], NULL, ecran, &position);                        // Add the cell to the SDL window
-          SDL_Flip(ecran);                                                        // Update the SDL window
-          break;
       }
   }
 
@@ -160,7 +208,13 @@ int initGrid(mat* mat1, dimensions dim) {
     SDL_FreeSurface(stripev[i]);        // Free all the vertical stripes
   }
   SDL_FreeSurface(ecran);     // Free the global SDL window
+  SDL_FreeSurface(SDLimage);     // Free the SDL for image validation button
+  SDL_FreeSurface(SDLtext);     // Free the SDL for text
+  SDL_FreeSurface(SDLseparator);     // Free the SDL for the separator stripe
+  TTF_Quit();              // Quit the TTF library
   SDL_Quit();                 // Quit the SDL library
+  if (continuer == -1)
+    return ERRORVALUE;
   return 0;
 }
 
@@ -188,6 +242,7 @@ int dispGrid(mat mat1, dimensions dim) {
   if (ecran == NULL) {
     errorMSG("Erreur à l'ouverture de la fenêtre SDL");
     printf("%s\n", SDL_GetError());
+    SDL_Quit();                             // Quit the SDL library
     return ERRORVALUE;
   }
   xlarge = XWINDOW / (dim.width);         // Width of a cell (horizontal dimension)
@@ -198,8 +253,14 @@ int dispGrid(mat mat1, dimensions dim) {
 
   for (i = 0; i < nb_cells; i++) {
     code = parametersCell(&position, &pixel, mat1, dim, i);        // Compute cordinates and color for cell i
-    if (code < 0)
+    if (code < 0) {
+      for (i = 0; i < DIMH*DIMX; i++) {
+        SDL_FreeSurface(cellule[i]);        // Free all the cells
+      }
+      SDL_FreeSurface(ecran);     // Free the global SDL window
+      SDL_Quit();                 // Quit the SDL library
       return ERRORVALUE;
+    }
     SDL_FillRect(cellule[i], NULL, SDL_MapRGB(ecran->format, pixel, pixel, pixel));       // Update the new parameters for cell i
     SDL_BlitSurface(cellule[i], NULL, ecran, &position);                                // Add the cell to the SDL window
   }
@@ -266,15 +327,23 @@ int playGame(mat mat1, dimensions dim) {
   if (TTF_Init() == -1) {             // Open the TTF library
     errorMSG("Erreur à l'initialisation de la librairie TTF");
     printf("%s\n", SDL_GetError());
+    for (i = 0; i < DIMH*DIMX; i++) {
+      SDL_FreeSurface(cellule[i]);      // Free all the cells
+    }
+    SDL_FreeSurface(ecran);   // Free the global SDL window
     SDL_Quit();                   // Quit the SDL library
     return ERRORVALUE;
   }
   police = TTF_OpenFont("Police/clootie.otf", 30);      // Get the police file
   code = oscilMatrix(mat1, dim);
   if (code < 0) {
-    SDL_Quit();               // Quit the SDL library
+    for (i = 0; i < DIMH*DIMX; i++) {
+      SDL_FreeSurface(cellule[i]);      // Free all the cells
+    }
+    SDL_FreeSurface(ecran);   // Free the global SDL window
     TTF_CloseFont(police);    // Close the police file
     TTF_Quit();               // Quit the TTF library
+    SDL_Quit();               // Quit the SDL library
     return ERRORVALUE;
   }
 
@@ -297,9 +366,14 @@ int playGame(mat mat1, dimensions dim) {
       for (i = 0; i < nb_cells; i++) {
         code = parametersCell(&position, &pixel, mat1, dim, i);   // Compute cordinates and color for cell i
         if (code < 0) {
-          SDL_Quit();                // Quit the SDL library
+          SDL_FreeSurface(textSurface);   // Free the SDL text surface
+          for (i = 0; i < DIMH*DIMX; i++) {
+            SDL_FreeSurface(cellule[i]);      // Free all the cells
+          }
+          SDL_FreeSurface(ecran);   // Free the global SDL window
           TTF_CloseFont(police);    // Close the police file
           TTF_Quit();               // Quit the TTF library
+          SDL_Quit();                // Quit the SDL library
           return ERRORVALUE;
         }
         SDL_FillRect(cellule[i], NULL, SDL_MapRGB(ecran->format, pixel, pixel, pixel));   // Update the new parameters for cell i
@@ -320,10 +394,11 @@ int playGame(mat mat1, dimensions dim) {
         for (i = 0; i < DIMH*DIMX; i++) {
           SDL_FreeSurface(cellule[i]);      // Free all the cells
         }
+        SDL_FreeSurface(textSurface);   // Free the SDL text surface
         SDL_FreeSurface(ecran);   // Free the global SDL window
-        SDL_Quit();                // Quit the SDL library
         TTF_CloseFont(police);    // Close the police file
         TTF_Quit();                // Quit the TTF library
+        SDL_Quit();                // Quit the SDL library
         return ERRORVALUE;
       }
       if (code == 1)          // Stable configuration has been detected (over 2 successive generations)
@@ -334,10 +409,11 @@ int playGame(mat mat1, dimensions dim) {
           for (i = 0; i < DIMH*DIMX; i++) {
             SDL_FreeSurface(cellule[i]);      // Free all the cells
           }
+          SDL_FreeSurface(textSurface);   // Free the SDL text surface
           SDL_FreeSurface(ecran);   // Free the global SDL window
-          SDL_Quit();               // Quit the SDL library
           TTF_CloseFont(police);    // Close the police file
           TTF_Quit();               // Quit the TTF library
+          SDL_Quit();               // Quit the SDL library
           return ERRORVALUE;
         }
         if (code > 0)  {        // Matrix oscillation detected : 'code' contains the period
@@ -352,15 +428,14 @@ int playGame(mat mat1, dimensions dim) {
 
     else
       SDL_Delay(WAITTIME - (actualtime - prevtime));    // Puts the process to sleep
-
   }
 
   pauseSDL();                           // Fully empty grid reached, waiting for closing the SDL window
   for (i = 0; i < DIMH*DIMX; i++) {
     SDL_FreeSurface(cellule[i]);      // Free all the cells
   }
+  SDL_FreeSurface(textSurface);   // Free the SDL text surface
   SDL_FreeSurface(ecran);   // Free the global SDL window
-
   TTF_CloseFont(police);    // Close the police file
   SDL_Quit();             // Quit the SDL library
   TTF_Quit();              // Quit the TTF library

@@ -3,7 +3,6 @@
 #define ERRORVALUE    -1
 #define ERRORSTRING   1
 #define EXITVALUE     2
-#define LOADVALUE     3
 
 #define DIMH      50
 #define DIMX      50
