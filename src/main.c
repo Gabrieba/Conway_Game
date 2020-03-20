@@ -57,7 +57,7 @@ void helpCommand(int bit_load) {
 
 // Load an initial grid in the shell from a '.txt' file
 // The matrix is loaded in 'pgrid', its dimensions are loaded in 'dim'
-// Return ERRORVALUE if an error has occured, 0 otherwise
+// Return ERRORVALUE or ERRORSTRING if an error has occured, 0 otherwise
 int loadGrid(char* filename, mat* pgrid, dimensions* dim) {
   FILE* f1; int i, j, width, height;
   char chaine[256];
@@ -66,13 +66,13 @@ int loadGrid(char* filename, mat* pgrid, dimensions* dim) {
   strcat(file, filename);
   f1 = fopen(file, "r");
   if (f1 == NULL) {
-    errorMSG("Ouverture du fichier grille initiale impossible");
+    errorMSG("Initial grid file opening is impossible");
     return ERRORVALUE;
   }
   fgets(chaine, 128, f1);             // Read the comment in the first line
   fscanf(f1, "%d %d", &height, &width);   // Read the dimensions and store it 'height' and 'width'
   if (height > DIMH || width > DIMX) {
-    warningMSG("Matrice trop grande; veuillez changer 'DIMH' et/ou 'DIMX' dans main.h");
+    warningMSG("Matrix too big; please change 'DIMH' and/or 'DIMX' in file 'main.h'");
     return ERRORSTRING;
   }
   dim->height = height;   // Store the matrix height
@@ -82,30 +82,58 @@ int loadGrid(char* filename, mat* pgrid, dimensions* dim) {
   char line[dim->width];
   for (i = 0; i < dim->height; i++) {
     if(fgets(line, (dim->width)+2, f1) == NULL) {     // Not enough cells lines in the matrix
-      errorMSG("Trop peu de lignes de cellules dans la grille");
+      errorMSG("Not enough cell lines in the grid (loadGrid)");
       return ERRORVALUE;
     }
     for (j = 0; j < dim->width; j++) {
       state = line[j];
       if (state == '\n' || state == ' ') {      // Not enough cells in a matrix line
-        errorMSG("Trop peu de cellules inscrites dans une ligne de la grille.");
+        errorMSG("Not enough cells written in a line of the grid (loadGrid)");
         return ERRORVALUE;
       }
       if (state != 48 && state != 49) {     // ASCII characters of '0' and '1'
-        errorMSG("Etat inconnu lu dans la grille (0/1)");
-        printf("state = %c\n", state);
+        errorMSG("Unknown cell state read in your grid ; waited : 0 / 1 (loadGrid)");
+        printf("state = %c ?\n", state);
         return ERRORVALUE;
       }
       (*pgrid)[i][j] = (char) state;
     }
   }
   if(fgets(line, (dim->width)+2, f1) != NULL) {     // Too much cells lines in the matrix
-    errorMSG("Trop de lignes de cellules dans la grille");
+    errorMSG("Too much lines in the grid (loadGrid)");
     return ERRORVALUE;
   }
   fclose(f1);
   return 0;
 }
+
+
+
+
+// Create a new file 'filename', and store in it the cells matrix
+// Return ERRORVALUE if an error has occured, 0 otherwise
+int matrixToText(char* filename, mat mat1, dimensions dim) {
+  FILE* fp;
+  int i, j;
+  char filepath[128] = "grid/";
+  strcat(filepath, filename);     // Add the folder before the filename
+  fp = fopen(filepath, "a");      // Create the new file
+  if (fp == NULL) {
+    errorMSG("Error while creating the file in 'matrixToText'");
+    return ERRORVALUE;
+  }
+  fprintf(fp, "# GRID CONWAY'S GAME\n");      // Write the comment on the first line
+  fprintf(fp, "%d %d\n", dim.height, dim.width);      // Write the dimensions of the matrix
+  for (i = 0; i < dim.height; i++) {
+    for (j = 0; j < dim.width; j++) {
+      fprintf(fp, "%c", mat1[i][j]);      // Write the cell states in the .txt file
+    }
+    fprintf(fp, "\n");      // Carriage return at the end of the line
+  }
+  fclose(fp);
+  return 0;
+}
+
 
 
 
@@ -158,13 +186,13 @@ int createMatrix(mat* pmat) {
     int i, j;
     *pmat = malloc(DIMH * sizeof *(*pmat));     // Allocate an array of cells lines
     if (*pmat == NULL) {
-        errorMSG("Allocation mémoire impossible pour la matrice");
+        errorMSG("Memory allocation for matrix impossible (createMatrix)");
         return ERRORVALUE;
     }
     for (i = 0; i < DIMH; i++) {
       (*pmat)[i] = calloc(DIMX, sizeof *(*pmat)[i]);    // Allocate a cells line
       if ((*pmat)[i] == NULL) {
-        errorMSG("Allocation mémoire impossible pour la matrice");
+        errorMSG("Memory allocation for matrix impossible (createMatrix)");
         return ERRORVALUE;
       }
     }
@@ -201,90 +229,91 @@ int executecmd(char* cmd, char* filename, mat* mat1, dimensions* dim, int* bit_l
     return EXITVALUE;
   }
   else if (strcmp(cmd, "load") == 0) {
+    if (*bit_load == 1)
+      destroyMatrix(mat1);            // Free the previous matrix
     code = createMatrix(mat1);            // Create the matrix
-    if (code < 0) {
+    if (code < 0)
       return ERRORVALUE;
-    }
     strcat(command, filename);
     if (system(command) != 0) {         // Check if the file 'filename' exists in the folder '/grid'
-      warningMSG("Fichier grille initiale introuvable");
+      warningMSG("Initial grid file not found");
       return 0;
     }
     code = loadGrid(filename, mat1, dim);     // load the user grid into the matrix
-    if (code != 0) {
-      destroyMatrix(mat1);        // Free the matrix
-      return code;
-    }
+    if (code < 0)
+      return code;                // Return the error code
     *bit_load = 1;              // Grid loaded in the shell
     printMatrix(*mat1, *dim);     // Disp the cells matrix in the shell
     return 0;
   }
   else if (strcmp(cmd, "disp") == 0) {
     if (*bit_load != 1) {                 // If the user didn't load his initial grid before
-      warningMSG("Veuillez charger une grille initiale avant de l'afficher");
+      warningMSG("Please load an initial grid in the shell before printing it");
       return 0;
     }
     code = dispGrid(*mat1, *dim);   // Disp the cells matrix in a SDL graphic window
-    if (code < 0) {
-      destroyMatrix(mat1);      // Free the matrix
+    if (code < 0)
       return ERRORVALUE;
-    }
     return 0;
   }
   else if (strcmp(cmd, "run") == 0) {
     if (*bit_load != 1) {        // If the user didn't load or create his initial grid before
-      warningMSG("Veuillez charger une grille initiale avant de l'exécuter");
+      warningMSG("Please load an initial grid in the shell before running it");
       return ERRORSTRING;
     }
     code = newMatrix(mat1, *dim);     // Get the matrix of the next cells generation and store it in 'mat1'
-    if (code < 0) {
-      destroyMatrix(mat1);    // Free the matrix
+    if (code < 0)
       return ERRORVALUE;
-    }
     printMatrix(*mat1, *dim);      // Disp the cells matrix in the shell
     return 0;
   }
   else if (strcmp(cmd, "play") == 0) {
     if (*bit_load != 1) {           // No grid previously saved or created
-      warningMSG("Veuillez charger une grille initiale avant de l'exécuter");
+      warningMSG("Please load an initial grid in the shell before running it");
       return ERRORSTRING;
     }
     code = playGame(*mat1, *dim);     // Play with the grid 'mat1' with a graphic display
     system("rm tmp.rle");         // Remove temporary RLE file which contains all the RLE configurations of the previous game
-    if (code < 0) {
-      destroyMatrix(mat1);        // Free the matrix
+    if (code < 0)
       return ERRORVALUE;
-    }
     return 0;
   }
   else if (strcmp(cmd, "convert") == 0) {
     strcat(command, filename);
     if (system(command) != 0) {           // Check wether the file is in the folder '/grid' or not
-      warningMSG("Fichier grille initiale introuvable");
+      warningMSG("Initial grid file not found");
       return ERRORSTRING;
     }
     code = textToRLE(filename);     // Convert the file .txt to RLE file
-    if (code < 0) {
-      if (*bit_load == 1)
-        destroyMatrix(mat1);    // Free the matrix
+    if (code < 0)
       return ERRORVALUE;
-    }
     return 0;
   }
   else if (strcmp(cmd, "create") == 0) {
     dim->width = 40;
     dim->height = 40;
+    if (filename[0] != '\0') {      // User specify a filename
+      strcat(command, filename);
+      if (system(command) == 0) {           // Verify that the filename specified by the user doesn't already exist
+        warningMSG("Please specify another name for your file, because it already exists");
+        return ERRORSTRING;
+      }
+    }
     if (*bit_load == 1)
-      destroyMatrix(mat1);       // Free the matrix, to erase the previous initial grid
+      destroyMatrix(mat1);       // Free the previous matrix, to erase the previous initial grid
     code = createMatrix(mat1);            // Create the new matrix
     if (code < 0)
       return ERRORVALUE;
     code = initGrid(mat1, *dim);     // Enable user to create a new initial grid through a SDL graphic interface
-    if (code < 0) {
-      destroyMatrix(mat1);
+    if (code < 0)
       return ERRORVALUE;
-    }
     *bit_load = 1;          // The new grid is created and saved in the shell
+    if (filename[0] != '\0') {          // If the user didn't specify a filename
+      code = matrixToText(filename, *mat1, *dim);     // Store the grid in a new .txt file
+      if (code < 0)
+        return ERRORVALUE;
+      infoMSG("Your initial grid has been successfully saved");
+    }
     return 0;
   }
   else if (strcmp(cmd, "help") == 0) {
@@ -292,7 +321,7 @@ int executecmd(char* cmd, char* filename, mat* mat1, dimensions* dim, int* bit_l
     return 0;
   }
   else {
-    warningMSG("Commande inconnue");
+    warningMSG("Unknown command");
     return ERRORSTRING;
   }
 }
@@ -303,30 +332,35 @@ int executecmd(char* cmd, char* filename, mat* mat1, dimensions* dim, int* bit_l
 // Return ERRORSTRING if an error occured because of the user
 // Return 0 otherwise
 int stringStandardise(char* cmd, char* filename) {
-  const char* separators = " -";
+  const char* separators = " ";
   char* str;                // Local variable used by strtok
   strcpy(str, cmd);
   char* strtoken = strtok(str, separators);   // Get the user command
   if (strtoken == NULL)       // Empty command
     return ERRORSTRING;
   strcpy(cmd, strtoken);         // Store the user command
-  strtoken = strtok(NULL, separators);   // Get the filename
-  if (strcmp(cmd, "load") != 0 && strcmp(cmd, "convert") != 0) {      //If the user command isn't 'load' or 'convert'
-    if (strtoken != NULL) {                     // Too much arguments
-      warningMSG("Trop d'arguments spécifiés");
-      return ERRORSTRING;
-    }
-    return 0;
-  }
-  else {        // for commands 'load' and 'convert'
-    if (strtoken == NULL) {
-      warningMSG("Il manque le nom de la grille à traiter");
+  if (strcmp(cmd, "load") == 0 || strcmp(cmd, "convert") == 0 ) {     // Command 'load' and 'convert'
+    strtoken = strtok(NULL, separators);   // Get the filename
+    if (strtoken == NULL) {                     // No filename specified
+      warningMSG("Please, specified a filename");
       return ERRORSTRING;
     }
     strcpy(filename, strtoken);         // Store the filename
-    strtoken = strtok(NULL, separators);      // Check if something is written after the filename
-    if (strtoken != NULL) {               // Too much arguments
-      warningMSG("Trop d'arguments spécifiés");
+    strtoken = strtok(NULL, separators);   // Get the filename
+    if (strtoken != NULL) {                     // too much arguments
+      warningMSG("Too much arguments");
+      return ERRORSTRING;
+    }
+  }
+  else if (strcmp(cmd, "create") == 0) {      // Command 'create'
+    strtoken = strtok(NULL, separators);      // Get the filename if it has been specified
+    if (strtoken != NULL)
+      strcpy(filename, strtoken);         // Store the filename if it has been specified
+  }
+  else {      // Command 'exit' 'play' 'run' 'disp' 'help'
+    strtoken = strtok(NULL, separators);   // Get the filename
+    if (strtoken != NULL) {                     // too much arguments
+      warningMSG("Too much arguments");
       return ERRORSTRING;
     }
   }
@@ -345,12 +379,12 @@ int main(int argc, char* argv[]) {
   puts("\n \t \t WELCOME TO CONWAY'S GAME");
   char* cmd = calloc(128, sizeof(*cmd));          // Dynamic memory for user command
   if (cmd == NULL) {
-    errorMSG("Erreur lors de l'allocation mémoire de commande.");
+    errorMSG("Error while allocating memory for user command (main)");
     exit(EXIT_FAILURE);
   }
   char* filename = calloc(128, sizeof(*filename));      // Dynamic memory for the filename
   if (cmd == NULL) {
-    errorMSG("Erreur lors de l'allocation mémoire de nom de fichier.");
+    errorMSG("Error while allocating memory for filename (main)");
     exit(EXIT_FAILURE);
   }
 
@@ -360,29 +394,29 @@ int main(int argc, char* argv[]) {
     if (code == 0)                                     // If no error has occured
       code = executecmd(cmd, filename, &mat1, &dim, &bit_load);        // Execute the user command
     cmd[0] = '\0';            // Erase the previous command
-    filename[0] = '\0';       // Erase the previous filename
+    filename[0] = '\0';       // Erase the previous filename between each command
     switch(code) {      // Errors handler
       case 0 :          // No error
         break;
       case ERRORSTRING :    // Typo in a user command
         break;
       case EXITVALUE :      // The user asks to quit the shell ; matrix mat1 already free
-        free(cmd);
-        free(filename);
+        free(cmd);              // Free the user command
+        free(filename);         // Free the filename
         exit(EXIT_SUCCESS);
       case ERRORVALUE:      // An error has occured in an other function
-        puts("Erreur détectée");
+        puts("Error detected");
         if (bit_load == 1)
-          destroyMatrix(&mat1);
-        free(cmd);
-        free(filename);
+          destroyMatrix(&mat1);   // Free the cells matrix
+        free(cmd);                  // Free the user command
+        free(filename);               // Free the filename
         exit(EXIT_FAILURE);
       default :                 // Error occured in the errors handler
-        errorMSG("Code de retour inconnu");
+        errorMSG("Unknown return code (error handler)");
         if (bit_load == 1)
-          destroyMatrix(&mat1);
-        free(cmd);
-        free(filename);
+          destroyMatrix(&mat1);     // Free the cells matrix
+        free(cmd);                  // Free the user command
+        free(filename);             // Free the filename
         exit(EXIT_FAILURE);
     }
   }
